@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro - Concurso de Huapango Zimapán 2026</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+
+    <div class="container py-5">
+        
+        <header class="text-center mb-5">
+            <h1 class="display-5 fw-bold text-primary">Concurso Nacional de Baile de Huapango</h1>
+            <h2 class="text-secondary">Ayuntamiento de Zimapán 2026</h2>
+            <p class="lead">Sistema Automatizado de Registro Oficial</p>
+        </header>
+
+        <div class="card shadow-lg mx-auto" style="max-width: 900px;">
+            <div class="card-body p-4 p-md-5">
+                
+                <form action="/procesar_registro" method="POST" enctype="multipart/form-data">
+
+                    <h4 class="mb-4 pb-2 border-bottom text-primary">1. Datos de la Pareja</h4>
+                    
+                    <div class="row g-4 mb-5">
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light border rounded">
+                                <h5 class="mb-3">Bailarín 1</h5>
+                                <div class="mb-3">
+                                    <label for="curp_1" class="form-label fw-bold">CURP:</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="curp_1" name="curp_1" placeholder="Ingrese CURP" required>
+                                        <button class="btn btn-secondary" type="button" id="btn_extraer_1">Extraer Datos</button>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="nombre_1" class="form-label fw-bold">Nombre Completo:</label>
+                                    <input type="text" class="form-control" id="nombre_1" name="nombre_1" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="fecha_nac_1" class="form-label fw-bold">Fecha de Nacimiento:</label>
+                                    <input type="date" class="form-control" id="fecha_nac_1" name="fecha_nac_1" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light border rounded">
+                                <h5 class="mb-3">Bailarín 2</h5>
+                                <div class="mb-3">
+                                    <label for="curp_2" class="form-label fw-bold">CURP:</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control" id="curp_2" name="curp_2" placeholder="Ingrese CURP" required>
+                                        <button class="btn btn-secondary" type="button" id="btn_extraer_2">Extraer Datos</button>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="nombre_2" class="form-label fw-bold">Nombre Completo:</label>
+                                    <input type="text" class="form-control" id="nombre_2" name="nombre_2" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="fecha_nac_2" class="form-label fw-bold">Fecha de Nacimiento:</label>
+                                    <input type="date" class="form-control" id="fecha_nac_2" name="fecha_nac_2" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h4 class="mb-4 pb-2 border-bottom text-primary">2. Detalles de Participación</h4>
+                    
+                    <div class="row g-3 mb-5">
+                        <div class="col-md-6">
+                            <label for="estado" class="form-label fw-bold">Estado de Procedencia:</label>
+                            <select class="form-select" id="estado" name="estado" required>
+                                <option value="">Selecciona Estado...</option>
+                                <option value="Hidalgo">Hidalgo</option>
+                                <option value="Queretaro">Querétaro</option>
+                                <option value="San Luis Potosi">San Luis Potosí</option>
+                                <option value="Veracruz">Veracruz</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="municipio" class="form-label fw-bold">Municipio:</label>
+                            <input type="text" class="form-control" id="municipio" name="municipio" placeholder="Ej. Zimapán" required>
+                        </div>
+                        <div class="col-md-12 mt-3">
+                            <label for="estilo" class="form-label fw-bold">Estilo a Participar:</label>
+                            <select class="form-select" id="estilo" name="estilo" required>
+                                <option value="">Selecciona Estilo...</option>
+                                <option value="Hidalguense">Hidalguense</option>
+                                <option value="Queretano">Queretano</option>
+                                <option value="Potosino">Potosino</option>
+                                <option value="Tamaulipeco">Tamaulipeco</option>
+                                <option value="Veracruzano">Veracruzano</option>
+                                <option value="Poblano">Poblano</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <h4 class="mb-4 pb-2 border-bottom text-primary">3. Validación de Pago</h4>
+                    
+                    <div class="alert alert-info" role="alert">
+                        Costo de inscripción por pareja: <strong>$250 MXN</strong>
+                    </div>
+                    
+                    <div class="mb-5">
+                        <label for="comprobante" class="form-label fw-bold">Subir Comprobante (Máx 5MB):</label>
+                        <input class="form-control" type="file" id="comprobante" name="comprobante" accept="image/*" required>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary btn-lg" type="submit">Confirmar Registro Completo</button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+
+        <footer class="text-center mt-5 mb-4 text-muted">
+            <small>©Zimapán Hgo. 2026, MDAZ</small>
+        </footer>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Función principal para extraer la fecha
+        function procesarCURP(idCurp, idFechaNac) {
+            const curpInput = document.getElementById(idCurp).value.trim().toUpperCase();
+            
+            // Validamos que la CURP tenga 18 caracteres
+            if (curpInput.length !== 18) {
+                alert("La CURP debe tener exactamente 18 caracteres.");
+                return;
+            }
+
+            // Extraemos los números que corresponden a la fecha (Posiciones 4 a 9 en índice de array)
+            let año = curpInput.substring(4, 6);
+            let mes = curpInput.substring(6, 8);
+            let dia = curpInput.substring(8, 10);
+
+            // Lógica para saber si nació en los 1900s o los 2000s
+            // La posición 16 de la CURP es un número para nacidos hasta 1999, y una letra para 2000 en adelante
+            let digitoSiglo = curpInput.charAt(16);
+            if (isNaN(digitoSiglo)) {
+                año = "20" + año; // Es una letra, nació en el 2000 o después
+            } else {
+                año = "19" + año; // Es número, nació en 1999 o antes
+            }
+
+            // Armamos la fecha en formato YYYY-MM-DD para el campo de tipo 'date'
+            let fechaCompleta = `${año}-${mes}-${dia}`;
+            
+            // Asignamos el valor al campo de Fecha de Nacimiento
+            document.getElementById(idFechaNac).value = fechaCompleta;
+            
+            // Ponemos la CURP en mayúsculas por si la escribieron en minúsculas
+            document.getElementById(idCurp).value = curpInput;
+        }
+
+        // Conectamos los botones a nuestra función cuando les den clic
+        document.getElementById("btn_extraer_1").addEventListener("click", function() {
+            procesarCURP("curp_1", "fecha_nac_1");
+        });
+
+        document.getElementById("btn_extraer_2").addEventListener("click", function() {
+            procesarCURP("curp_2", "fecha_nac_2");
+        });
+    </script>
+    
+</body>
+</html>

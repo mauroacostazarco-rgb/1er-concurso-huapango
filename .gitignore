@@ -1,0 +1,15 @@
+# Ignorar el entorno virtual
+venv/
+env/
+
+# Ignorar bases de datos locales
+*.db
+registro_huapango.db
+
+# Ignorar archivos temporales de Python
+__pycache__/
+*.pyc
+
+# Ignorar las fotos de prueba locales
+static/uploads/*
+!static/uploads/.gitkeep
