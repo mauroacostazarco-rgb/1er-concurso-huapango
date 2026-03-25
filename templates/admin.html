@@ -5,45 +5,84 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Control - Concurso Huapango 2026</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* Paleta de Colores Institucionales */
+        .bg-guinda { background-color: #691C32 !important; }
+        .text-guinda { color: #691C32 !important; }
+        .btn-guinda { background-color: #691C32; color: white; border: none; }
+        .btn-guinda:hover { background-color: #4A1322; color: white; }
+        
+        .bg-dorado { background-color: #BC955C !important; }
+        .text-dorado { color: #BC955C !important; }
+        .btn-dorado { background-color: #BC955C; color: white; border: none; }
+        .btn-dorado:hover { background-color: #9C7B4C; color: white; }
+
+        .table-guinda thead {
+            background-color: #691C32;
+            color: white;
+        }
+    </style>
 </head>
 <body class="bg-light">
 
     <div class="container-fluid py-4 px-5">
         
-        <header class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
+        <header class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom border-2 border-dorado">
             <div>
-                <h2 class="fw-bold text-primary">Registros Recibidos</h2>
-                <p class="text-muted mb-0">Panel de administración interna</p>
-                <a href="/descargar_excel" class="btn btn-success me-2">
+                <h2 class="fw-bold text-guinda mb-0">Registros Recibidos</h2>
+                <p class="text-muted mb-0">Panel de administración interna - Zimapán</p>
+            </div>
+            
+            <div>
+                <a href="/descargar_excel" class="btn btn-dorado me-2 fw-bold">
                     📥 Descargar Excel
                 </a>
                 <a href="/" class="btn btn-outline-secondary">Ir al Formulario</a>
             </div>
-            <a href="/" class="btn btn-outline-secondary">Ir al Formulario de Registro</a>
         </header>
 
-        <div class="card shadow-sm">
+        <div class="card shadow-sm border-0">
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-striped table-hover mb-0">
-                        <thead class="table-dark">
+                    <table class="table table-striped table-hover align-middle mb-0">
+                        <thead class="table-guinda">
                             <tr>
                                 <th>Folio</th>
+                                <th>Teléfono</th>
                                 <th>Bailarín 1</th>
                                 <th>Bailarín 2</th>
                                 <th>Procedencia</th>
                                 <th>Estilo</th>
                                 <th>Categoría</th>
-                                <th>Fecha Registro</th>
+                                <th>Comprobante</th> <th>Fecha Registro</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for pareja in parejas %}
                             <tr>
-                                <td class="fw-bold text-center">{{ pareja[0] }}</td> <td>{{ pareja[2] }} <br> <small class="text-muted">{{ pareja[1] }}</small></td> <td>{{ pareja[5] }} <br> <small class="text-muted">{{ pareja[4] }}</small></td> <td>{{ pareja[8] }}, {{ pareja[7] }}</td> <td>{{ pareja[9] }}</td> <td><span class="badge bg-success">{{ pareja[10] }}</span></td> <td><small>{{ pareja[12] }}</small></td> </tr>
+                                <td class="fw-bold text-center text-guinda">{{ pareja[0] }}</td>
+                                <td class="fw-bold">{{ pareja[1] }}</td>
+                                <td>{{ pareja[3] }} <br> <small class="text-muted">{{ pareja[2] }}</small></td>
+                                <td>{{ pareja[6] }} <br> <small class="text-muted">{{ pareja[5] }}</small></td>
+                                <td>{{ pareja[9] }}, {{ pareja[8] }}</td>
+                                <td>{{ pareja[10] }}</td>
+                                <td><span class="badge bg-dorado text-dark">{{ pareja[11] }}</span></td>
+                                
+                                <td class="text-center">
+                                    {% if pareja[12] != 'sin_comprobante.png' %}
+                                        <a href="{{ pareja[12] }}" target="_blank" class="btn btn-sm btn-outline-danger fw-bold" style="color: #691C32; border-color: #691C32;">
+                                            👁️ Ver Ticket
+                                        </a>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Sin comprobante</span>
+                                    {% endif %}
+                                </td>
+
+                                <td><small class="text-muted">{{ pareja[13] }}</small></td>
+                            </tr>
                             {% else %}
                             <tr>
-                                <td colspan="7" class="text-center py-4 text-muted">Aún no hay registros en la base de datos.</td>
+                                <td colspan="9" class="text-center py-5 text-muted">Aún no hay registros en la base de datos.</td>
                             </tr>
                             {% endfor %}
                         </tbody>

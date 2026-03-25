@@ -1,69 +1,62 @@
-from flask import Flask, render_template, request
-from werkzeug.utils import secure_filename
-from datetime import datetime
-import sqlite3
 import os
+from flask import Flask, render_template, request, send_file
+from werkzeug.utils import secure_filename
+from datetime import datetime, timedelta
 import csv
-import io
-from flask import make_response
+import psycopg2 
+import cloudinary
+import cloudinary.uploader
 
 app = Flask(__name__)
 
-# Configuración para guardar las imágenes
-CARPETA_SUBIDAS = 'static/uploads'
-app.config['CARPETA_SUBIDAS'] = CARPETA_SUBIDAS
+# ========================================================
+# 🔑 LLAVE DE TU BASE DE DATOS (SUPABASE)
+# ========================================================
+URL_BASE_DATOS = "postgresql://postgres.hszcoiulvjkuhhycodvd:Z!m4p4n_Huapang0@aws-1-us-east-1.pooler.supabase.com:5432/postgres"
 
-# Aseguramos que la carpeta de subidas exista al iniciar
-os.makedirs(CARPETA_SUBIDAS, exist_ok=True)
+# ========================================================
+# ☁️ LLAVES DE TU BÓVEDA DE IMÁGENES (CLOUDINARY)
+# ========================================================
+cloudinary.config(
+  cloud_name = "dbwkwatfe",
+  api_key = "119747285193542",
+  api_secret = "V8GTv2DjmX6VE1qbyIWtfo7YKMo"
+)
 
-# ==========================================
-# 1. CONFIGURACIÓN DEL CONCURSO Y CATEGORÍAS
-# ==========================================
-CONFIGURACION_CONCURSO = {
-    "fecha_corte": datetime(2026, 8, 15),
-    "categorias": {
-        "Huapangueritos": {"min": 3, "max": 5},
-        "Infantil": {"min": 6, "max": 12},
-        "Juvenil": {"min": 13, "max": 17},
-        "Adultos": {"min": 18, "max": 99}
-    }
-}
+# 1. LÓGICA DE CATEGORÍAS
+def asignar_categoria_pareja(fecha_1, fecha_2):
+    def obtener_edad(fecha_nacimiento):
+        fecha_nac = datetime.strptime(fecha_nacimiento, '%Y-%m-%d')
+        fecha_concurso = datetime(2026, 4, 4)
+        edad = fecha_concurso.year - fecha_nac.year - ((fecha_concurso.month, fecha_concurso.day) < (fecha_nac.month, fecha_nac.day))
+        return edad
 
-def calcular_edad(fecha_nacimiento, fecha_corte):
-    edad = fecha_corte.year - fecha_nacimiento.year
-    if (fecha_corte.month, fecha_corte.day) < (fecha_nacimiento.month, fecha_nacimiento.day):
-        edad -= 1
-    return edad
+    edad_1 = obtener_edad(fecha_1)
+    edad_2 = obtener_edad(fecha_2)
+    edad_mayor = max(edad_1, edad_2)
 
-def asignar_categoria_pareja(fecha_nac_1_str, fecha_nac_2_str):
-    formato_fecha = "%Y-%m-%d"
-    fecha_nac_1 = datetime.strptime(fecha_nac_1_str, formato_fecha)
-    fecha_nac_2 = datetime.strptime(fecha_nac_2_str, formato_fecha)
-    fecha_corte = CONFIGURACION_CONCURSO["fecha_corte"]
-    
-    edad_1 = calcular_edad(fecha_nac_1, fecha_corte)
-    edad_2 = calcular_edad(fecha_nac_2, fecha_corte)
-    edad_competencia = max(edad_1, edad_2)
-    
-    for nombre_categoria, rangos in CONFIGURACION_CONCURSO["categorias"].items():
-        if rangos["min"] <= edad_competencia <= rangos["max"]:
-            return nombre_categoria
-    return "Fuera de Rango"
+    if edad_mayor <= 6:
+        return "Pequeños Huapangueros"
+    elif edad_mayor <= 12:
+        return "Infantil"
+    elif edad_mayor <= 17:
+        return "Juvenil"
+    else:
+        return "Adultos"
 
-# ==========================================
-# 2. BASE DE DATOS
-# ==========================================
+# 2. CONEXIÓN A LA NUBE (PostgreSQL)
 def iniciar_base_datos():
-    conexion = sqlite3.connect('registro_huapango.db')
+    conexion = psycopg2.connect(URL_BASE_DATOS)
     cursor = conexion.cursor()
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS parejas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
+            telefono TEXT,
             curp_1 TEXT, nombre_1 TEXT, fecha_nac_1 TEXT,
             curp_2 TEXT, nombre_2 TEXT, fecha_nac_2 TEXT,
             estado TEXT, municipio TEXT, estilo TEXT,
             categoria_asignada TEXT, foto_comprobante TEXT,
-            fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            fecha_registro TEXT
         )
     ''')
     conexion.commit()
@@ -71,111 +64,90 @@ def iniciar_base_datos():
 
 iniciar_base_datos()
 
-# ==========================================
-# 3. RUTAS DE LA APLICACIÓN WEB
-# ==========================================
+# 3. RUTAS DE LA APLICACIÓN
 @app.route('/')
-def inicio():
+def index():
     return render_template('index.html')
 
 @app.route('/procesar_registro', methods=['POST'])
 def procesar_registro():
     if request.method == 'POST':
-        # 1. Atrapamos los textos del formulario
+        telefono = request.form.get('telefono') 
         curp_1 = request.form.get('curp_1')
         nombre_1 = request.form.get('nombre_1')
         fecha_nac_1 = request.form.get('fecha_nac_1')
-        
         curp_2 = request.form.get('curp_2')
         nombre_2 = request.form.get('nombre_2')
         fecha_nac_2 = request.form.get('fecha_nac_2')
-        
         estado = request.form.get('estado')
         municipio = request.form.get('municipio')
         estilo = request.form.get('estilo')
 
-        # 2. Calculamos la categoría mágicamente en el backend
         categoria = asignar_categoria_pareja(fecha_nac_1, fecha_nac_2)
 
-        # 3. Procesamos y guardamos la imagen de forma segura
+        # ==========================================
+        # 🚀 MAGIA DE CLOUDINARY: SUBIR LA IMAGEN
+        # ==========================================
         archivo = request.files['comprobante']
         if archivo.filename != '':
-            # secure_filename limpia el nombre del archivo (quita espacios raros o caracteres peligrosos)
-            nombre_archivo = secure_filename(archivo.filename)
-            ruta_guardado = os.path.join(app.config['CARPETA_SUBIDAS'], nombre_archivo)
-            archivo.save(ruta_guardado)
+            # Cloudinary toma el archivo y lo sube directo a sus servidores
+            respuesta_nube = cloudinary.uploader.upload(archivo)
+            # Cloudinary nos devuelve un enlace seguro (URL) de dónde quedó guardada
+            enlace_imagen = respuesta_nube.get('secure_url')
         else:
-            nombre_archivo = "sin_comprobante.png"
+            enlace_imagen = "sin_comprobante.png"
 
-        # 4. Inyectamos todo a la Base de Datos
-        conexion = sqlite3.connect('registro_huapango.db')
+        hora_hidalgo = datetime.utcnow() - timedelta(hours=6)
+        fecha_exacta = hora_hidalgo.strftime('%Y-%m-%d %H:%M:%S')
+
+        conexion = psycopg2.connect(URL_BASE_DATOS)
         cursor = conexion.cursor()
+        
+        # En vez de guardar un nombre como "ticket.jpg", guardamos el enlace completo de internet
         cursor.execute('''
             INSERT INTO parejas (
-                curp_1, nombre_1, fecha_nac_1, 
+                telefono, curp_1, nombre_1, fecha_nac_1, 
                 curp_2, nombre_2, fecha_nac_2, 
                 estado, municipio, estilo, 
-                categoria_asignada, foto_comprobante
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (curp_1, nombre_1, fecha_nac_1, curp_2, nombre_2, fecha_nac_2, estado, municipio, estilo, categoria, nombre_archivo))
+                categoria_asignada, foto_comprobante, fecha_registro
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id;
+        ''', (telefono, curp_1, nombre_1, fecha_nac_1, curp_2, nombre_2, fecha_nac_2, estado, municipio, estilo, categoria, enlace_imagen, fecha_exacta))
+        
+        folio = cursor.fetchone()[0] 
         
         conexion.commit()
         conexion.close()
 
-        # 5. Respuesta temporal de éxito
-        return f"<h1>¡Registro Exitoso!</h1><p>La pareja ha sido inscrita en la categoría: <strong>{categoria}</strong></p>"
-    
-    # ==========================================
-# 4. PANEL DE ADMINISTRACIÓN
-# ==========================================
+        return render_template('exito.html', folio=folio, nombre_1=nombre_1, nombre_2=nombre_2, categoria=categoria)
+
 @app.route('/admin')
 def panel_admin():
-    # Nos conectamos a la base de datos
-    conexion = sqlite3.connect('registro_huapango.db')
+    conexion = psycopg2.connect(URL_BASE_DATOS)
     cursor = conexion.cursor()
-    
-    # Traemos todos los registros, ordenados del más reciente al más antiguo
     cursor.execute('SELECT * FROM parejas ORDER BY id DESC')
-    registros = cursor.fetchall()
-    
+    datos = cursor.fetchall()
     conexion.close()
-    
-    # Mandamos los datos a una nueva plantilla HTML
-    return render_template('admin.html', parejas=registros)
+    return render_template('admin.html', parejas=datos)
 
-# ==========================================
-# 5. EXPORTAR A EXCEL (CSV)
-# ==========================================
 @app.route('/descargar_excel')
 def descargar_excel():
-    # 1. Nos conectamos a la base de datos
-    conexion = sqlite3.connect('registro_huapango.db')
+    conexion = psycopg2.connect(URL_BASE_DATOS)
     cursor = conexion.cursor()
-    cursor.execute('SELECT * FROM parejas ORDER BY id DESC')
-    registros = cursor.fetchall()
+    cursor.execute('SELECT * FROM parejas ORDER BY id ASC')
+    datos = cursor.fetchall()
     conexion.close()
 
-    # 2. Creamos un archivo en la memoria del servidor
-    salida = io.StringIO()
-    # Agregamos este código (BOM) para que Excel lea perfectamente los acentos y las "ñ"
-    salida.write('\ufeff')
-    escritor = csv.writer(salida)
+    ruta_csv = os.path.join('static', 'registros_huapango.csv')
+    with open(ruta_csv, mode='w', newline='', encoding='utf-8-sig') as archivo_csv:
+        escritor = csv.writer(archivo_csv)
+        escritor.writerow(['Folio', 'Teléfono', 'CURP 1', 'Nombre 1', 'Fecha Nac 1', 
+                           'CURP 2', 'Nombre 2', 'Fecha Nac 2', 
+                           'Estado', 'Municipio', 'Estilo', 
+                           'Categoría', 'Archivo Comprobante', 'Fecha de Registro'])
+        escritor.writerows(datos)
 
-    # 3. Escribimos la fila de los encabezados
-    escritor.writerow(['Folio', 'CURP 1', 'Nombre 1', 'Fecha Nac 1', 
-                       'CURP 2', 'Nombre 2', 'Fecha Nac 2', 
-                       'Estado', 'Municipio', 'Estilo', 
-                       'Categoría', 'Archivo Comprobante', 'Fecha de Registro'])
-
-    # 4. Volcamos todos los datos de la base de datos
-    escritor.writerows(registros)
-
-    # 5. Preparamos la respuesta para que el navegador descargue el archivo
-    respuesta = make_response(salida.getvalue())
-    respuesta.headers["Content-Disposition"] = "attachment; filename=Registros_Huapango_Zimapan.csv"
-    respuesta.headers["Content-type"] = "text/csv"
-
-    return respuesta
+    return send_file(ruta_csv, as_attachment=True)
 
 if __name__ == '__main__':
     app.run(debug=True)
