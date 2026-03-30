@@ -7,9 +7,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     
     <style>
-        /* 1. Imagen de fondo a pantalla completa */
         body {
-            background-image: url('/static/fondo.png'); /* Asegúrate de tener tu imagen aquí */
+            background-image: url('{{ url_for("static", filename="fondo.png") }}');
             background-size: cover; 
             background-position: center;
             background-attachment: fixed; 
@@ -17,10 +16,8 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        /* 2. Colores Institucionales */
         .text-guinda { color: #691C32 !important; }
         .bg-guinda { background-color: #691C32 !important; color: white; }
-        
         .text-dorado { color: #BC955C !important; }
         .bg-dorado { background-color: #BC955C !important; }
         .border-dorado { border: 2px solid #BC955C !important; }
@@ -31,16 +28,14 @@
         .btn-outline-guinda { color: #691C32; border-color: #691C32; background-color: transparent; }
         .btn-outline-guinda:hover { background-color: #691C32; color: white; }
 
-        /* 3. Contenedor del Formulario (Efecto Cristal) */
         .card-formulario {
-            background-color: rgba(255, 255, 255, 0.92); /* Blanco transparente */
+            background-color: rgba(255, 255, 255, 0.92);
             border-radius: 15px;
             box-shadow: 0 15px 35px rgba(0,0,0,0.3);
-            border-top: 6px solid #691C32; /* Línea guinda superior */
-            backdrop-filter: blur(8px); /* Desenfoca el fondo */
+            border-top: 6px solid #691C32;
+            backdrop-filter: blur(8px);
         }
 
-        /* 4. Adorno estilo Hidalgo */
         .adorno-hidalgo {
             background-image: radial-gradient(#BC955C 20%, transparent 20%), radial-gradient(#BC955C 20%, transparent 20%);
             background-position: 0 0, 10px 10px;
@@ -67,9 +62,17 @@
 
         <div class="card card-formulario mx-auto border-0" style="max-width: 900px;">
             <div class="card-body p-4 p-md-5">
-                
-                <form action="/procesar_registro" method="POST" enctype="multipart/form-data">
 
+                {% if fecha_cierre %}
+                <div class="alert bg-guinda text-white text-center shadow-sm mb-5" style="border-radius: 12px;">
+                    <h5 class="mb-2 fw-bold text-dorado">⏳ Tiempo restante para el cierre de registros:</h5>
+                    <div id="cronometro" class="display-5 fw-bold" style="letter-spacing: 2px; text-shadow: 2px 2px 4px rgba(0,0,0,0.4);">
+                        Calculando...
+                    </div>
+                    <small class="d-block mt-2 fw-bold text-light">El sistema se cerrará automáticamente el 11 de Septiembre a las 12:00 hrs.</small>
+                </div>
+                {% endif %}
+                <form action="/procesar_registro" method="POST" enctype="multipart/form-data">
                     <h4 class="mb-4 pb-2 border-bottom border-dorado text-guinda fw-bold">1. Datos de la Pareja</h4>
                     
                     <div class="row g-4 mb-4">
@@ -183,27 +186,23 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
+        // 1. FUNCIÓN DE LA CURP (Intacta)
         function procesarCURP(idCurp, idFechaNac) {
             const curpInput = document.getElementById(idCurp).value.trim().toUpperCase();
-            
             if (curpInput.length !== 18) {
                 alert("La CURP debe tener exactamente 18 caracteres.");
                 return;
             }
-
             let año = curpInput.substring(4, 6);
             let mes = curpInput.substring(6, 8);
             let dia = curpInput.substring(8, 10);
-
             let digitoSiglo = curpInput.charAt(16);
             if (isNaN(digitoSiglo)) {
                 año = "20" + año; 
             } else {
                 año = "19" + año; 
             }
-
             let fechaCompleta = `${año}-${mes}-${dia}`;
-            
             document.getElementById(idFechaNac).value = fechaCompleta;
             document.getElementById(idCurp).value = curpInput;
         }
@@ -215,6 +214,40 @@
         document.getElementById("btn_extraer_2").addEventListener("click", function() {
             procesarCURP("curp_2", "fecha_nac_2");
         });
+
+        // 2. MAGIA DEL CRONÓMETRO DE CIERRE
+        {% if fecha_cierre %}
+        // Tomamos la fecha exacta de cierre que configuramos en Python
+        const fechaLimite = new Date("{{ fecha_cierre }}").getTime();
+
+        const intervalo = setInterval(function() {
+            const ahora = new Date().getTime();
+            const distancia = fechaLimite - ahora;
+
+            // Si el tiempo se acaba, recargamos la página para que Python nos mande a cerrado.html
+            if (distancia < 0) {
+                clearInterval(intervalo);
+                document.getElementById("cronometro").innerHTML = "¡TIEMPO AGOTADO!";
+                setTimeout(() => { window.location.reload(); }, 1500);
+                return;
+            }
+
+            // Cálculos matemáticos de días, horas, minutos y segundos
+            const dias = Math.floor(distancia / (1000 * 60 * 60 * 24));
+            const horas = Math.floor((distancia % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutos = Math.floor((distancia % (1000 * 60 * 60)) / (1000 * 60));
+            const segundos = Math.floor((distancia % (1000 * 60)) / 1000);
+
+            // Agregar un cero a la izquierda si el número es menor a 10 (ej. 09h en vez de 9h)
+            const fHoras = horas < 10 ? "0" + horas : horas;
+            const fMin = minutos < 10 ? "0" + minutos : minutos;
+            const fSeg = segundos < 10 ? "0" + segundos : segundos;
+
+            // Pintar los números en la pantalla
+            document.getElementById("cronometro").innerHTML = 
+                dias + " Días, " + fHoras + ":" + fMin + ":" + fSeg;
+        }, 1000); // Se actualiza cada 1 segundo (1000 milisegundos)
+        {% endif %}
     </script>
     
 </body>

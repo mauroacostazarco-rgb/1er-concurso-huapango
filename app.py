@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, request, send_file
+from flask import Flask, render_template, request, send_file, session, redirect, url_for
 from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta
 import csv
@@ -8,15 +8,23 @@ import cloudinary
 import cloudinary.uploader
 
 app = Flask(__name__)
+# 🔒 Llave secreta necesaria para que el servidor recuerde quién inició sesión
+app.secret_key = "llave_super_secreta_zimapan_2026" 
 
 # ========================================================
-# 🔑 LLAVE DE TU BASE DE DATOS (SUPABASE)
+# ⚙️ CONFIGURACIÓN DEL EVENTO Y SEGURIDAD
+# ========================================================
+USUARIO_ADMIN = "admin"
+PASSWORD_ADMIN = "Zimapan2026*"
+
+# Fecha de cierre: Año(2026), Mes(9), Día(11), Hora(12), Minuto(0), Segundo(0)
+FECHA_CIERRE = datetime(2026, 9, 11, 12, 0, 0)
+
+# ========================================================
+# 🔑 TUS LLAVES DE BÓVEDA (Vuelve a pegarlas aquí)
 # ========================================================
 URL_BASE_DATOS = "postgresql://postgres.hszcoiulvjkuhhycodvd:Z!m4p4n_Huapang0@aws-1-us-east-1.pooler.supabase.com:5432/postgres"
 
-# ========================================================
-# ☁️ LLAVES DE TU BÓVEDA DE IMÁGENES (CLOUDINARY)
-# ========================================================
 cloudinary.config(
   cloud_name = "dbwkwatfe",
   api_key = "119747285193542",
@@ -44,7 +52,6 @@ def asignar_categoria_pareja(fecha_1, fecha_2):
     else:
         return "Adultos"
 
-# 2. CONEXIÓN A LA NUBE (PostgreSQL)
 def iniciar_base_datos():
     conexion = psycopg2.connect(URL_BASE_DATOS)
     cursor = conexion.cursor()
@@ -67,10 +74,22 @@ iniciar_base_datos()
 # 3. RUTAS DE LA APLICACIÓN
 @app.route('/')
 def index():
-    return render_template('index.html')
+    hora_hidalgo = datetime.utcnow() - timedelta(hours=6)
+    
+    # Si ya pasó la fecha de cierre, mostramos la pantalla de "Cerrado"
+    if hora_hidalgo >= FECHA_CIERRE:
+        return render_template('cerrado.html')
+        
+    # Si aún estamos a tiempo, mandamos la fecha límite al HTML para el cronómetro
+    return render_template('index.html', fecha_cierre=FECHA_CIERRE.isoformat())
 
 @app.route('/procesar_registro', methods=['POST'])
 def procesar_registro():
+    # Doble candado: Si alguien intenta forzar el envío después de la fecha, el servidor lo rechaza
+    hora_hidalgo = datetime.utcnow() - timedelta(hours=6)
+    if hora_hidalgo >= FECHA_CIERRE:
+        return "El registro ha finalizado de manera oficial.", 403
+
     if request.method == 'POST':
         telefono = request.form.get('telefono') 
         curp_1 = request.form.get('curp_1')
@@ -85,25 +104,18 @@ def procesar_registro():
 
         categoria = asignar_categoria_pareja(fecha_nac_1, fecha_nac_2)
 
-        # ==========================================
-        # 🚀 MAGIA DE CLOUDINARY: SUBIR LA IMAGEN
-        # ==========================================
         archivo = request.files['comprobante']
         if archivo.filename != '':
-            # Cloudinary toma el archivo y lo sube directo a sus servidores
             respuesta_nube = cloudinary.uploader.upload(archivo)
-            # Cloudinary nos devuelve un enlace seguro (URL) de dónde quedó guardada
             enlace_imagen = respuesta_nube.get('secure_url')
         else:
             enlace_imagen = "sin_comprobante.png"
 
-        hora_hidalgo = datetime.utcnow() - timedelta(hours=6)
         fecha_exacta = hora_hidalgo.strftime('%Y-%m-%d %H:%M:%S')
 
         conexion = psycopg2.connect(URL_BASE_DATOS)
         cursor = conexion.cursor()
         
-        # En vez de guardar un nombre como "ticket.jpg", guardamos el enlace completo de internet
         cursor.execute('''
             INSERT INTO parejas (
                 telefono, curp_1, nombre_1, fecha_nac_1, 
@@ -121,8 +133,33 @@ def procesar_registro():
 
         return render_template('exito.html', folio=folio, nombre_1=nombre_1, nombre_2=nombre_2, categoria=categoria)
 
+# ========================================================
+# 🛡️ RUTAS DE SEGURIDAD Y ADMINISTRACIÓN
+# ========================================================
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    error = None
+    if request.method == 'POST':
+        usuario = request.form.get('usuario')
+        password = request.form.get('password')
+        if usuario == USUARIO_ADMIN and password == PASSWORD_ADMIN:
+            session['admin_logueado'] = True
+            return redirect(url_for('panel_admin'))
+        else:
+            error = "Credenciales incorrectas. Acceso denegado."
+    return render_template('login.html', error=error)
+
+@app.route('/logout')
+def logout():
+    session.pop('admin_logueado', None)
+    return redirect(url_for('login'))
+
 @app.route('/admin')
 def panel_admin():
+    # Candado: Si no está logueado, lo regresamos a la pantalla de login
+    if 'admin_logueado' not in session:
+        return redirect(url_for('login'))
+
     conexion = psycopg2.connect(URL_BASE_DATOS)
     cursor = conexion.cursor()
     cursor.execute('SELECT * FROM parejas ORDER BY id DESC')
@@ -132,6 +169,10 @@ def panel_admin():
 
 @app.route('/descargar_excel')
 def descargar_excel():
+    # Candado para descargas
+    if 'admin_logueado' not in session:
+        return redirect(url_for('login'))
+
     conexion = psycopg2.connect(URL_BASE_DATOS)
     cursor = conexion.cursor()
     cursor.execute('SELECT * FROM parejas ORDER BY id ASC')

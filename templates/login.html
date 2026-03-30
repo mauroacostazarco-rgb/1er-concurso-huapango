@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso Seguro - H. Ayuntamiento</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f4f4f4; }
+        .bg-guinda { background-color: #691C32 !important; color: white; }
+        .text-guinda { color: #691C32 !important; }
+        .text-dorado { color: #BC955C !important; }
+        .btn-guinda { background-color: #691C32; color: white; border: none; }
+        .btn-guinda:hover { background-color: #4A1322; color: white; }
+    </style>
+</head>
+<body class="d-flex align-items-center justify-content-center vh-100">
+
+    <div class="card shadow-lg p-4 p-md-5 mx-3" style="max-width: 450px; width: 100%; border-radius: 15px; border-top: 6px solid #691C32;">
+        
+        <div class="text-center mb-4">
+            <h3 class="fw-bold text-guinda mb-1">Acceso Oficial</h3>
+            <p class="text-muted small fw-bold">Panel de Administración de Registros</p>
+        </div>
+        
+        {% if error %}
+        <div class="alert alert-danger py-2 text-center small fw-bold">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST" action="/login">
+            <div class="mb-3">
+                <label class="form-label fw-bold">Usuario Asignado</label>
+                <input type="text" name="usuario" class="form-control bg-light" placeholder="Ej. admin" required autofocus>
+            </div>
+            <div class="mb-4">
+                <label class="form-label fw-bold">Contraseña de Seguridad</label>
+                <input type="password" name="password" class="form-control bg-light" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn btn-guinda btn-lg w-100 fw-bold shadow-sm">
+                Ingresar al Sistema
+            </button>
+        </form>
+
+        <div class="text-center mt-4">
+            <a href="/" class="text-decoration-none text-muted small">← Volver al inicio</a>
+        </div>
+    </div>
+
+</body>
+</html>
