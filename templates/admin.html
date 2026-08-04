@@ -6,7 +6,6 @@
     <title>Panel de Control - Concurso Huapango 2026</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        /* Paleta de Colores Institucionales */
         .bg-guinda { background-color: #691C32 !important; }
         .text-guinda { color: #691C32 !important; }
         .btn-guinda { background-color: #691C32; color: white; border: none; }
@@ -32,15 +31,98 @@
                 <h2 class="fw-bold text-guinda mb-0">Registros Recibidos</h2>
                 <p class="text-muted mb-0">Panel de administración interna - Zimapán</p>
             </div>
-            
-            <div>
-                <a href="/descargar_excel" class="btn btn-dorado me-2 fw-bold">
-                    📥 Descargar Excel
+
+            <div class="d-flex align-items-center flex-wrap gap-2">
+                
+                <!-- BOTÓN: REINICIO TOTAL (Participantes) -->
+                <form action="/limpiar_participantes" method="POST" class="m-0" onsubmit="return confirm('🚨 ¡PELIGRO DE BORRADO TOTAL!\n\n¿Estás seguro de borrar a TODOS LOS PARTICIPANTES registrados?\n\nEsto eliminará a las parejas, sus calificaciones, y reiniciará el contador para que el siguiente sea el Folio #1.\n\nESTA ACCIÓN NO SE PUEDE DESHACER.');">
+                    <button type="submit" class="btn btn-dark fw-bold shadow-sm" style="background-color: #212529; border: none;">
+                        🗑️ Borrar Todos los Registros
+                    </button>
+                </form>
+
+                <!-- BOTÓN: LIMPIAR SOLO CALIFICACIONES -->
+                <form action="/limpiar_base" method="POST" class="m-0" onsubmit="return confirm('⚠️ ¡ADVERTENCIA!\n\n¿Estás seguro de borrar TODAS las calificaciones de los jueces?\n\n(Los participantes inscritos NO se borrarán).');">
+                    <button type="submit" class="btn btn-danger fw-bold shadow-sm" style="background-color: #dc3545; border: none;">
+                        🧹 Borrar Calificaciones
+                    </button>
+                </form>
+
+                <a href="/admin_jueces" class="btn btn-primary fw-bold shadow-sm" style="background-color: #0d6efd; border: none;">
+                    ⚖️ Gestor Jueces
                 </a>
-                <a href="/" class="btn btn-outline-secondary">Ir al Formulario</a>
-                <a href="/logout" class="btn btn-outline-danger fw-bold shadow-sm">🚪 Cerrar Sesión</a>
+                <a href="/resultados" class="btn btn-warning fw-bold shadow-sm" style="background-color: #ffc107; color: #4A1322;">
+                    🏆 Resultados
+                </a>
+                <a href="/descargar_excel" class="btn btn-dorado fw-bold">
+                    📥 Excel
+                </a>
+                <a href="/" class="btn btn-outline-secondary fw-bold">Formulario</a>
+                <a href="/logout" class="btn btn-outline-danger fw-bold shadow-sm">🚪 Salir</a>
             </div>
+
         </header>
+
+        <!-- ========================================== -->
+        <!-- PANEL DE CONTROL DE PISTA INTELIGENTE      -->
+        <!-- ========================================== -->
+        <div class="card mb-5" style="border-radius: 15px; border-top: 6px solid #115236; box-shadow: 0 10px 20px rgba(0,0,0,0.1);">
+            <div class="card-body p-4">
+                <h4 class="fw-bold mb-4" style="color: #115236;">🎛️ Semáforo y Control de Pista (Modo Inteligente)</h4>
+                
+                <form action="/activar_pista" method="POST">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-dark">Paso 1: Selecciona la Categoría</label>
+                            <select class="form-select border-secondary fw-bold" name="categoria" id="select-categoria" required onchange="filtrarParejas()">
+                                <option value="">Elige Categoría...</option>
+                                <option value="Pequeños Huapangueros">Pequeños Huapangueros</option>
+                                <option value="Infantil">Infantil</option>
+                                <option value="Juvenil">Juvenil</option>
+                                <option value="Adultos">Adultos</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold" style="color: #691C32;">Pareja 1</label>
+                            <select class="form-select form-select-lg shadow-sm select-folio" name="folio_1" onchange="bloquearDuplicados()">
+                                <option value="">-- Seleccionar --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold" style="color: #691C32;">Pareja 2</label>
+                            <select class="form-select form-select-lg shadow-sm select-folio" name="folio_2" onchange="bloquearDuplicados()">
+                                <option value="">-- Seleccionar --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold" style="color: #691C32;">Pareja 3</label>
+                            <select class="form-select form-select-lg shadow-sm select-folio" name="folio_3" onchange="bloquearDuplicados()">
+                                <option value="">-- Seleccionar --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold" style="color: #691C32;">Pareja 4</label>
+                            <select class="form-select form-select-lg shadow-sm select-folio" name="folio_4" onchange="bloquearDuplicados()">
+                                <option value="">-- Seleccionar --</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-3">
+                        <button type="submit" class="btn btn-lg text-white fw-bold px-4 shadow-sm" style="background-color: #115236; border: none;">
+                            🟢 Enviar a Pista (Activar)
+                        </button>
+                        <button type="submit" formaction="/desactivar_pista" formnovalidate class="btn btn-outline-danger btn-lg fw-bold px-4 shadow-sm">
+                            🔴 Detener Pista (Inactivar)
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <!-- ========================================== -->
 
         <div class="card shadow-sm border-0">
             <div class="card-body p-0">
@@ -55,7 +137,8 @@
                                 <th>Procedencia</th>
                                 <th>Estilo</th>
                                 <th>Categoría</th>
-                                <th>Comprobante</th> <th>Fecha Registro</th>
+                                <th>Comprobante</th> 
+                                <th>Fecha Registro</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -97,6 +180,65 @@
         </footer>
 
     </div>
+
+    <!-- SCRIPT DEL SEMÁFORO INTELIGENTE -->
+    <script>
+        // Python nos inyecta el diccionario de parejas disponibles
+        const parejasDisponibles = [
+            {% for p in disponibles %}
+                { id: {{ p[0] }}, categoria: "{{ p[1] }}", nombre1: "{{ p[2] }}", nombre2: "{{ p[3] }}" },
+            {% endfor %}
+        ];
+
+        const selectCategoria = document.getElementById('select-categoria');
+        const selectsFolio = document.querySelectorAll('.select-folio');
+
+        // Función 1: Se ejecuta al cambiar la categoría
+        function filtrarParejas() {
+            const categoriaSeleccionada = selectCategoria.value;
+            
+            // Filtramos las parejas disponibles que coinciden con la categoría
+            const parejasFiltradas = parejasDisponibles.filter(p => p.categoria === categoriaSeleccionada);
+            
+            // Limpiamos y rellenamos los 4 menús desplegables
+            selectsFolio.forEach(select => {
+                select.innerHTML = '<option value="">-- Seleccionar --</option>'; // Limpiar
+                
+                parejasFiltradas.forEach(p => {
+                    const opcion = document.createElement('option');
+                    opcion.value = p.id;
+                    // Mostramos el Folio y el primer nombre de cada integrante
+                    const nom1 = p.nombre1.split(" ")[0];
+                    const nom2 = p.nombre2.split(" ")[0];
+                    opcion.textContent = `Folio #${p.id} - ${nom1} y ${nom2}`;
+                    select.appendChild(opcion);
+                });
+            });
+            
+            bloquearDuplicados(); // Refrescamos bloqueos
+        }
+
+        // Función 2: Se ejecuta cada vez que seleccionas un folio
+        function bloquearDuplicados() {
+            // Obtenemos qué folios ya fueron seleccionados en los 4 cuadros
+            const foliosElegidos = Array.from(selectsFolio).map(s => s.value).filter(v => v !== "");
+            
+            // Recorremos cada cuadro
+            selectsFolio.forEach(select => {
+                // Recorremos las opciones dentro de cada cuadro
+                Array.from(select.options).forEach(opcion => {
+                    if (opcion.value === "") return; // Ignoramos el "-- Seleccionar --"
+                    
+                    // Si el folio ya está elegido en otro cuadro distinto, lo desactivamos (gris)
+                    if (foliosElegidos.includes(opcion.value) && select.value !== opcion.value) {
+                        opcion.disabled = true;
+                    } else {
+                        opcion.disabled = false;
+                    }
+                });
+            });
+        }
+    </script>
 
 </body>
 </html>

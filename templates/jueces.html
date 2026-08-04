@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Jueces - Huapango</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .bg-guinda { background-color: #691C32 !important; color: white; }
+        .text-guinda { color: #691C32 !important; }
+        .bg-dorado { background-color: #BC955C !important; color: white; }
+    </style>
+</head>
+<body class="bg-light">
+
+    <div class="container py-5">
+        <header class="d-flex justify-content-between align-items-center mb-5 border-bottom pb-3">
+            <div>
+                <h1 class="fw-bold text-guinda mb-0">⚖️ Gestor del Jurado Calificador</h1>
+                <p class="text-muted fs-5">Alta y baja de jueces</p>
+            </div>
+            <div>
+                <a href="/admin" class="btn btn-outline-secondary fw-bold btn-lg">← Volver al Panel General</a>
+            </div>
+        </header>
+
+        <div class="row">
+            <!-- Formulario para agregar nuevo juez -->
+            <div class="col-md-4 mb-4">
+                <div class="card shadow-sm" style="border-top: 5px solid #BC955C;">
+                    <div class="card-body p-4">
+                        <h4 class="fw-bold mb-4 text-guinda">Agregar Nuevo Juez</h4>
+                        <form action="/agregar_juez" method="POST">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Nombre Real o Título</label>
+                                <input type="text" class="form-control" name="nombre_real" placeholder="Ej. Profe. Roberto" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Usuario para iniciar sesión</label>
+                                <input type="text" class="form-control" name="usuario" placeholder="Ej. juez4" required>
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">Contraseña Segura</label>
+                                <input type="text" class="form-control" name="password" placeholder="Ej. Huapango26" required>
+                            </div>
+                            <button type="submit" class="btn btn-lg bg-dorado w-100 fw-bold shadow-sm">➕ Dar de Alta</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lista de Jueces Activos -->
+            <div class="col-md-8">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body p-4">
+                        <h4 class="fw-bold mb-4 text-guinda">Jueces Activos en el Sistema</h4>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="bg-guinda">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nombre Real</th>
+                                        <th>Usuario de Acceso</th>
+                                        <th>Contraseña</th>
+                                        <th class="text-center">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for juez in jueces %}
+                                    <tr>
+                                        <td class="fw-bold text-muted">#{{ juez[0] }}</td>
+                                        <td class="fw-bold fs-5">{{ juez[1] }}</td>
+                                        <td><span class="badge bg-secondary fs-6">{{ juez[2] }}</span></td>
+                                        <td><code>{{ juez[3] }}</code></td>
+                                        <td class="text-center">
+                                            <a href="/eliminar_juez/{{ juez[0] }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Seguro que deseas borrar a este juez? Perderá el acceso de inmediato.');">🗑️ Borrar</a>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="5" class="text-center py-4 text-muted">No hay jueces registrados.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

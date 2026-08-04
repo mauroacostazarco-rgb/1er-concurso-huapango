@@ -1,0 +1,40 @@
+contraseña BD Supabase
+
+Z!m4p4n_Huapang0
+___________________________________________________________
+
+
+arrancar el serv local
+🚀 Cómo correr el servidor local
+Para encender el motor y probar todo esto en tu computadora, sigue estos pasos:
+
+Abre la terminal (si estás usando Visual Studio Code, puedes abrirla en la pestaña superior Terminal > New Terminal).
+
+Asegúrate de estar dentro de la carpeta de tu proyecto (Registro_Huapango).
+
+Escribe el siguiente comando y presiona Enter:
+
+python app.py
+
+Verás el texto que dice Running on http://127.0.0.1:5000. ¡Eso significa que el servidor está encendido!
+
+Ve a tu navegador web y entra a esa dirección: http://127.0.0.1:5000
+
+___________________________________________________________________
+
+IPv6
+postgresql://postgres:Z!m4p4n_Huapang0@db.hszcoiulvjkuhhycodvd.supabase.co:5432/postgres
+
+IPv4
+postgresql://postgres.hszcoiulvjkuhhycodvd:Z!m4p4n_Huapang0@aws-1-us-east-1.pooler.supabase.com:5432/postgres
+
+
+_______________________________________________
+
+Llaves de Nube de imágenes
+
+Cloud name: dbwkwatfe
+API Key: 119747285193542
+API Secret: V8GTv2DjmX6VE1qbyIWtfo7YKMo
+
+

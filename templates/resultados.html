@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resultados Oficiales - Huapango 2026</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .bg-guinda { background-color: #691C32 !important; color: white; }
+        .text-guinda { color: #691C32 !important; }
+        .bg-dorado { background-color: #BC955C !important; color: white; }
+        .nav-pills .nav-link.active { background-color: #691C32 !important; }
+        .nav-pills .nav-link { color: #BC955C; font-weight: bold; font-size: 1.1rem; }
+        .podio-1 { background-color: #fff3cd; border-left: 5px solid #ffc107; } /* Oro */
+        .podio-2 { background-color: #f8f9fa; border-left: 5px solid #adb5bd; } /* Plata */
+        .podio-3 { background-color: #fff4e6; border-left: 5px solid #fd7e14; } /* Bronce */
+    </style>
+</head>
+<body class="bg-light">
+
+    <div class="container py-5">
+        
+        <header class="d-flex justify-content-between align-items-center mb-5 border-bottom pb-3">
+            <div>
+                <h1 class="fw-bold text-guinda mb-0">🏆 Tabla de Posiciones y Resultados</h1>
+                <p class="text-muted fs-5">Puntajes sumados en tiempo real</p>
+            </div>
+            <div>
+                <a href="/admin" class="btn btn-outline-secondary fw-bold btn-lg">← Volver al Panel</a>
+            </div>
+        </header>
+
+        <!-- Pestañas de Categorías -->
+        <ul class="nav nav-pills nav-fill mb-4 bg-white p-2 shadow-sm rounded-pill" id="pills-tab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#pequenos" type="button">Pequeños Huapangueros</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" data-bs-toggle="pill" data-bs-target="#infantil" type="button">Infantil</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" data-bs-toggle="pill" data-bs-target="#juvenil" type="button">Juvenil</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" data-bs-toggle="pill" data-bs-target="#adultos" type="button">Adultos</button>
+            </li>
+        </ul>
+
+        <!-- Contenido de las Tablas -->
+        <div class="tab-content shadow-sm bg-white p-4 rounded-4" id="pills-tabContent">
+            
+            {% set categorias_ids = [
+                ('pequenos', 'Pequeños Huapangueros'), 
+                ('infantil', 'Infantil'), 
+                ('juvenil', 'Juvenil'), 
+                ('adultos', 'Adultos')
+            ] %}
+
+            {% for id_html, nombre_cat in categorias_ids %}
+            <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="{{ id_html }}">
+                <h3 class="text-guinda fw-bold mb-4">Resultados: {{ nombre_cat }}</h3>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle fs-5">
+                        <thead class="bg-dorado text-white">
+                            <tr>
+                                <th class="text-center">Posición</th>
+                                <th>Folio</th>
+                                <th>Pareja</th>
+                                <th>Procedencia</th>
+                                <th>Estilo</th>
+                                <th class="text-center">Puntaje Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for fila in resultados[nombre_cat] %}
+                            <tr class="{% if loop.index == 1 %}podio-1 fw-bold{% elif loop.index == 2 %}podio-2 fw-bold{% elif loop.index == 3 %}podio-3 fw-bold{% endif %}">
+                                
+                                <td class="text-center fs-3">
+                                    {% if loop.index == 1 %} 🥇
+                                    {% elif loop.index == 2 %} 🥈
+                                    {% elif loop.index == 3 %} 🥉
+                                    {% else %} <span class="text-muted fs-6">{{ loop.index }}</span>
+                                    {% endif %}
+                                </td>
+                                
+                                <td class="text-guinda fw-bold">#{{ fila[0] }}</td>
+                                <td>{{ fila[1] }} <br> <small class="text-muted">{{ fila[2] }}</small></td>
+                                <td>{{ fila[3] }}, {{ fila[4] }}</td>
+                                <td>{{ fila[5] }}</td>
+                                
+                                <td class="text-center text-success fw-bold fs-4">
+                                    {{ fila[7] }} <span class="fs-6 text-muted fw-normal">pts</span>
+                                </td>
+                                
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="6" class="text-center py-5 text-muted">Aún no hay calificaciones registradas para esta categoría.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endfor %}
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

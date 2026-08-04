@@ -21,7 +21,7 @@ PASSWORD_ADMIN = "Zimapan2026*"
 FECHA_CIERRE = datetime(2026, 9, 11, 12, 0, 0)
 
 # ========================================================
-# 🔑 TUS LLAVES DE BÓVEDA (Vuelve a pegarlas aquí)
+# 🔑 TUS LLAVES DE BÓVEDA
 # ========================================================
 URL_BASE_DATOS = "postgresql://postgres.hszcoiulvjkuhhycodvd:Z!m4p4n_Huapang0@aws-1-us-east-1.pooler.supabase.com:5432/postgres"
 
@@ -66,6 +66,17 @@ def iniciar_base_datos():
             fecha_registro TEXT
         )
     ''')
+    
+    # NUEVO: Asegurarnos de que exista la tabla de jueces
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS jueces (
+            id SERIAL PRIMARY KEY,
+            nombre_real TEXT,
+            usuario TEXT UNIQUE,
+            password TEXT
+        )
+    ''')
+    
     conexion.commit()
     conexion.close()
 
@@ -162,10 +173,24 @@ def panel_admin():
 
     conexion = psycopg2.connect(URL_BASE_DATOS)
     cursor = conexion.cursor()
+    
+    # 1. Obtener todos los registros para mostrar en la tabla de abajo
     cursor.execute('SELECT * FROM parejas ORDER BY id DESC')
     datos = cursor.fetchall()
+    
+    # 2. NUEVO: Obtener parejas DISPONIBLES (que no han sido calificadas) para el Semáforo
+    cursor.execute('''
+        SELECT id, categoria_asignada, nombre_1, nombre_2 
+        FROM parejas 
+        WHERE id NOT IN (SELECT DISTINCT folio_pareja FROM calificaciones)
+        ORDER BY id ASC
+    ''')
+    parejas_disponibles = cursor.fetchall()
+    
     conexion.close()
-    return render_template('admin.html', parejas=datos)
+    
+    # Mandamos ambos paquetes de datos al HTML
+    return render_template('admin.html', parejas=datos, disponibles=parejas_disponibles)
 
 @app.route('/descargar_excel')
 def descargar_excel():
@@ -190,5 +215,344 @@ def descargar_excel():
 
     return send_file(ruta_csv, as_attachment=True)
 
+# ==========================================
+# NUEVO: MÓDULO DE GESTIÓN DE JUECES
+# ==========================================
+@app.route('/admin_jueces')
+def admin_jueces():
+    if 'admin_logueado' not in session:
+        return redirect(url_for('login'))
+        
+    conexion = psycopg2.connect(URL_BASE_DATOS)
+    cursor = conexion.cursor()
+    cursor.execute("SELECT id, nombre_real, usuario, password FROM jueces ORDER BY id ASC")
+    lista_jueces = cursor.fetchall()
+    conexion.close()
+    
+    return render_template('jueces.html', jueces=lista_jueces)
+
+@app.route('/agregar_juez', methods=['POST'])
+def agregar_juez():
+    if 'admin_logueado' not in session:
+        return redirect(url_for('login'))
+        
+    nombre_real = request.form.get('nombre_real')
+    usuario = request.form.get('usuario')
+    password = request.form.get('password')
+    
+    conexion = psycopg2.connect(URL_BASE_DATOS)
+    cursor = conexion.cursor()
+    try:
+        cursor.execute("INSERT INTO jueces (nombre_real, usuario, password) VALUES (%s, %s, %s)", 
+                       (nombre_real, usuario, password))
+        conexion.commit()
+    except psycopg2.IntegrityError:
+        conexion.rollback() # Ignora si el usuario ya existe para no chocar
+    finally:
+        cursor.close()
+        conexion.close()
+        
+    return redirect('/admin_jueces')
+
+@app.route('/eliminar_juez/<int:id_juez>')
+def eliminar_juez(id_juez):
+    if 'admin_logueado' not in session:
+        return redirect(url_for('login'))
+        
+    conexion = psycopg2.connect(URL_BASE_DATOS)
+    cursor = conexion.cursor()
+    cursor.execute("DELETE FROM jueces WHERE id = %s", (id_juez,))
+    conexion.commit()
+    cursor.close()
+    conexion.close()
+    
+    return redirect('/admin_jueces')
+
+# ==========================================
+# MÓDULO DEL JURADO CALIFICADOR
+# ==========================================
+
+@app.route('/juez')
+def juez_login():
+    # Si el juez ya había iniciado sesión, lo mandamos directo a calificar
+    if 'juez_id' in session:
+        return redirect('/pista_juez')
+    return render_template('juez_login.html')
+
+@app.route('/procesar_login_juez', methods=['POST'])
+def procesar_login_juez():
+    usuario = request.form.get('usuario')
+    password = request.form.get('password')
+
+    conexion = psycopg2.connect(URL_BASE_DATOS)
+    cursor = conexion.cursor()
+    
+    # Buscamos al juez en la base de datos
+    cursor.execute("SELECT id, nombre_real FROM jueces WHERE usuario = %s AND password = %s", (usuario, password))
+    juez = cursor.fetchone()
+    
+    cursor.close()
+    conexion.close()
+
+    if juez:
+        # Creamos una sesión segura para la tableta del juez
+        session['juez_id'] = juez[0]
+        session['juez_nombre'] = juez[1]
+        return redirect('/pista_juez')
+    else:
+        return render_template('juez_login.html', error="Credenciales incorrectas. Intente de nuevo.")
+
+@app.route('/pista_juez')
+def pista_juez():
+    # Cadenero de seguridad: Si no hay sesión, lo regresamos al login
+    if 'juez_id' not in session:
+        return redirect('/juez')
+    
+    conexion = psycopg2.connect(URL_BASE_DATOS)
+    cursor = conexion.cursor()
+    
+    # 1. Leemos el semáforo
+    cursor.execute("SELECT estado, categoria_actual, folio_1, folio_2, folio_3, folio_4 FROM pista_activa WHERE id = 1")
+    semaforo = cursor.fetchone()
+    
+    estado = semaforo[0]
+    categoria = semaforo[1]
+    folios_en_pista = [f for f in [semaforo[2], semaforo[3], semaforo[4], semaforo[5]] if f is not None]
+    
+    parejas_activas = []
+    folios_ya_calificados = [] # <--- NUEVO: Memoria del juez
+    
+    # 2. Si la pista está activa, buscamos a las parejas y revisamos el candado
+    if estado == 'calificando' and folios_en_pista:
+        placeholders = ','.join(['%s'] * len(folios_en_pista))
+        
+        # Obtenemos los datos de las parejas
+        query = f"SELECT id, estilo FROM parejas WHERE id IN ({placeholders}) ORDER BY id"
+        cursor.execute(query, tuple(folios_en_pista))
+        parejas_activas = cursor.fetchall()
+        
+        # NUEVO: Buscamos cuáles de estos folios YA calificó este juez en específico
+        query_calificados = f"SELECT folio_pareja FROM calificaciones WHERE id_juez = %s AND folio_pareja IN ({placeholders})"
+        cursor.execute(query_calificados, [session['juez_id']] + folios_en_pista)
+        # Convertimos la respuesta en una lista fácil de leer (Ej. [12, 15])
+        folios_ya_calificados = [row[0] for row in cursor.fetchall()]
+        
+    cursor.close()
+    conexion.close()
+    
+    return render_template('pista_juez.html', 
+                           nombre_juez=session['juez_nombre'],
+                           estado=estado,
+                           categoria=categoria,
+                           parejas=parejas_activas,
+                           folios_ya_calificados=folios_ya_calificados)
+
+# ==========================================
+# NUEVO: RUTA PARA RECIBIR Y GUARDAR PUNTOS
+# ==========================================
+@app.route('/guardar_calificacion', methods=['POST'])
+def guardar_calificacion():
+    if 'juez_id' not in session:
+        return redirect('/juez')
+        
+    juez_id = session['juez_id']
+    folio_pareja = request.form.get('folio_pareja')
+    categoria = request.form.get('categoria')
+    ronda = "Final" 
+    
+    # Capturamos los puntos de los deslizadores (si algo falla, ponemos 5 por defecto)
+    try:
+        vestuario = int(request.form.get('vestuario', 5))
+        ritmo = int(request.form.get('ritmo', 5))
+        precision = int(request.form.get('precision', 5))
+        coreografia = int(request.form.get('coreografia', 5))
+        dificultad = int(request.form.get('dificultad', 5))
+        proyeccion = int(request.form.get('proyeccion', 5))
+    except ValueError:
+        return "Error en los valores", 400
+        
+    # Suma matemática total
+    total = vestuario + ritmo + precision + coreografia + dificultad + proyeccion
+    
+    conexion = psycopg2.connect(URL_BASE_DATOS)
+    cursor = conexion.cursor()
+    
+    try:
+        # Inyectamos la calificación a Supabase
+        cursor.execute("""
+            INSERT INTO calificaciones (
+                folio_pareja, id_juez, categoria, ronda, 
+                vestuario, ritmo, precision_paso, coreografia, 
+                dificultad, proyeccion, total
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (folio_pareja, juez_id, categoria, ronda, vestuario, ritmo, precision, coreografia, dificultad, proyeccion, total))
+        
+        conexion.commit()
+    except Exception as e:
+        conexion.rollback()
+        # Si choca con el candado UNIQUE de la base de datos, lo ignoramos de forma segura
+    finally:
+        cursor.close()
+        conexion.close()
+        
+    # Recargamos la pantalla del juez al instante
+    return redirect('/pista_juez')
+
+@app.route('/logout_juez')
+def logout_juez():
+    # Destruimos la sesión de la tableta
+    session.pop('juez_id', None)
+    session.pop('juez_nombre', None)
+    return redirect('/juez')
+
+# ==========================================
+# MÓDULO DE CONTROL DE PISTA (ADMINISTRADOR)
+# ==========================================
+
+@app.route('/activar_pista', methods=['POST'])
+def activar_pista():
+    if 'admin_logueado' not in session:
+        return redirect(url_for('login'))
+    
+    categoria = request.form.get('categoria')
+    f1 = request.form.get('folio_1') if request.form.get('folio_1') else None
+    f2 = request.form.get('folio_2') if request.form.get('folio_2') else None
+    f3 = request.form.get('folio_3') if request.form.get('folio_3') else None
+    f4 = request.form.get('folio_4') if request.form.get('folio_4') else None
+    
+    conexion = psycopg2.connect(URL_BASE_DATOS)
+    cursor = conexion.cursor()
+    
+    cursor.execute("""
+        UPDATE pista_activa 
+        SET categoria_actual = %s, folio_1 = %s, folio_2 = %s, folio_3 = %s, folio_4 = %s, 
+            estado = 'calificando', ultima_actualizacion = CURRENT_TIMESTAMP
+        WHERE id = 1
+    """, (categoria, f1, f2, f3, f4))
+    
+    conexion.commit()
+    cursor.close()
+    conexion.close()
+    
+    return redirect(url_for('panel_admin'))
+
+@app.route('/desactivar_pista', methods=['POST'])
+def desactivar_pista():
+    if 'admin_logueado' not in session:
+        return redirect(url_for('login'))
+        
+    conexion = psycopg2.connect(URL_BASE_DATOS)
+    cursor = conexion.cursor()
+    
+    cursor.execute("UPDATE pista_activa SET estado = 'inactiva' WHERE id = 1")
+    
+    conexion.commit()
+    cursor.close()
+    conexion.close()
+    
+    return redirect(url_for('panel_admin'))
+
+# ==========================================
+# MÓDULO DE RESULTADOS Y GANADORES
+# ==========================================
+@app.route('/resultados')
+def panel_resultados():
+    # Candado de seguridad
+    if 'admin_logueado' not in session:
+        return redirect(url_for('login'))
+
+    conexion = psycopg2.connect(URL_BASE_DATOS)
+    cursor = conexion.cursor()
+    
+    # 1. Consulta SQL que suma los puntos de todos los jueces y los ordena
+    cursor.execute("""
+        SELECT 
+            p.id as folio, 
+            p.nombre_1, 
+            p.nombre_2, 
+            p.municipio, 
+            p.estado,
+            p.estilo,
+            p.categoria_asignada,
+            SUM(c.total) as puntaje_total,
+            COUNT(c.id_juez) as jueces_evaluadores
+        FROM parejas p
+        INNER JOIN calificaciones c ON p.id = c.folio_pareja
+        GROUP BY p.id, p.nombre_1, p.nombre_2, p.municipio, p.estado, p.estilo, p.categoria_asignada
+        ORDER BY p.categoria_asignada, puntaje_total DESC
+    """)
+    
+    datos_crudos = cursor.fetchall()
+    conexion.close()
+
+    # 2. Separamos los resultados en "cajitas" por categoría para mandarlos limpios al HTML
+    resultados_por_categoria = {
+        "Pequeños Huapangueros": [],
+        "Infantil": [],
+        "Juvenil": [],
+        "Adultos": []
+    }
+    
+    for fila in datos_crudos:
+        categoria = fila[6]
+        if categoria in resultados_por_categoria:
+            resultados_por_categoria[categoria].append(fila)
+
+    return render_template('resultados.html', resultados=resultados_por_categoria)
+
+# ==========================================
+# ZONA DE PELIGRO: LIMPIEZA DE BASE DE DATOS
+# ==========================================
+@app.route('/limpiar_base', methods=['POST'])
+def limpiar_base():
+    # Solo el administrador puede usar este botón
+    if 'admin_logueado' not in session:
+        return redirect(url_for('login'))
+        
+    conexion = psycopg2.connect(URL_BASE_DATOS)
+    cursor = conexion.cursor()
+    
+    # 1. Borramos TODAS las calificaciones registradas
+    cursor.execute("DELETE FROM calificaciones")
+    
+    # 2. Apagamos el semáforo para que quede todo limpio
+    cursor.execute("UPDATE pista_activa SET estado = 'inactiva' WHERE id = 1")
+    
+    conexion.commit()
+    cursor.close()
+    conexion.close()
+    
+    # Regresamos al panel
+    return redirect(url_for('panel_admin'))
+
+@app.route('/limpiar_participantes', methods=['POST'])
+def limpiar_participantes():
+    # Solo el administrador puede usar este botón
+    if 'admin_logueado' not in session:
+        return redirect(url_for('login'))
+        
+    conexion = psycopg2.connect(URL_BASE_DATOS)
+    cursor = conexion.cursor()
+    
+    try:
+        # TRUNCATE es el borrador maestro de PostgreSQL.
+        # RESTART IDENTITY: Obliga a que el ID (Folio) vuelva a empezar en 1.
+        # CASCADE: Si hay calificaciones ligadas a estas parejas, también las borra por seguridad.
+        cursor.execute("TRUNCATE TABLE parejas, calificaciones RESTART IDENTITY CASCADE;")
+        
+        # Apagamos la pista
+        cursor.execute("UPDATE pista_activa SET estado = 'inactiva' WHERE id = 1")
+        
+        conexion.commit()
+    except Exception as e:
+        conexion.rollback()
+        print(f"Error detectado al limpiar: {e}") # Esto nos avisará en la terminal negra si algo falla
+    finally:
+        cursor.close()
+        conexion.close()
+        
+    return redirect(url_for('panel_admin'))
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
