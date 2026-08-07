@@ -77,7 +77,9 @@
                     <small class="d-block mt-2 fw-bold text-light">El sistema se cerrará automáticamente el 11 de Septiembre a las 12:00 hrs.</small>
                 </div>
                 {% endif %}
-                <form action="/procesar_registro" method="POST" enctype="multipart/form-data">
+                
+                <!-- ¡NUEVO! Le quitamos el enctype de multipart para que envíe los datos más rápido -->
+                <form action="/procesar_registro" method="POST">
                     <h4 class="mb-4 pb-2 border-bottom border-dorado text-guinda fw-bold">1. Datos de la Pareja</h4>
                     
                     <div class="row g-4 mb-4">
@@ -171,13 +173,9 @@
 
                     <h4 class="mb-4 pb-2 border-bottom border-dorado text-guinda fw-bold">3. Validación de Pago</h4>
                     
+                    <!-- ¡NUEVO! Aviso de pago en puerta en lugar del campo para subir la foto -->
                     <div class="alert bg-dorado text-white fw-bold mb-4 shadow-sm" role="alert">
-                        📌 Costo de inscripción por pareja: $250 MXN
-                    </div>
-                    
-                    <div class="mb-5">
-                        <label for="comprobante" class="form-label fw-bold">Subir Comprobante (Máx 5MB):</label>
-                        <input class="form-control border-secondary" type="file" id="comprobante" name="comprobante" accept="image/*" required>
+                        📌 Nota importante: El costo de inscripción es de $250 MXN por pareja. El pago se realizará en efectivo el día del evento en la mesa de registro al presentar su folio.
                     </div>
 
                     <div class="d-grid gap-2 mt-5">
@@ -228,14 +226,12 @@
 
         // 2. MAGIA DEL CRONÓMETRO DE CIERRE
         {% if fecha_cierre %}
-        // Tomamos la fecha exacta de cierre que configuramos en Python
         const fechaLimite = new Date("{{ fecha_cierre }}").getTime();
 
         const intervalo = setInterval(function() {
             const ahora = new Date().getTime();
             const distancia = fechaLimite - ahora;
 
-            // Si el tiempo se acaba, recargamos la página para que Python nos mande a cerrado.html
             if (distancia < 0) {
                 clearInterval(intervalo);
                 document.getElementById("cronometro").innerHTML = "¡TIEMPO AGOTADO!";
@@ -243,21 +239,18 @@
                 return;
             }
 
-            // Cálculos matemáticos de días, horas, minutos y segundos
             const dias = Math.floor(distancia / (1000 * 60 * 60 * 24));
             const horas = Math.floor((distancia % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             const minutos = Math.floor((distancia % (1000 * 60 * 60)) / (1000 * 60));
             const segundos = Math.floor((distancia % (1000 * 60)) / 1000);
 
-            // Agregar un cero a la izquierda si el número es menor a 10 (ej. 09h en vez de 9h)
             const fHoras = horas < 10 ? "0" + horas : horas;
             const fMin = minutos < 10 ? "0" + minutos : minutos;
             const fSeg = segundos < 10 ? "0" + segundos : segundos;
 
-            // Pintar los números en la pantalla
             document.getElementById("cronometro").innerHTML = 
                 dias + " Días, " + fHoras + ":" + fMin + ":" + fSeg;
-        }, 1000); // Se actualiza cada 1 segundo (1000 milisegundos)
+        }, 1000); 
         {% endif %}
     </script>
     

@@ -4,8 +4,6 @@ from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta
 import csv
 import psycopg2 
-import cloudinary
-import cloudinary.uploader
 
 app = Flask(__name__)
 # 🔒 Llave secreta necesaria para que el servidor recuerde quién inició sesión
@@ -25,11 +23,6 @@ FECHA_CIERRE = datetime(2026, 9, 11, 12, 0, 0)
 # ========================================================
 URL_BASE_DATOS = "postgresql://postgres.hszcoiulvjkuhhycodvd:Z!m4p4n_Huapang0@aws-1-us-east-1.pooler.supabase.com:5432/postgres"
 
-cloudinary.config(
-  cloud_name = "dbwkwatfe",
-  api_key = "119747285193542",
-  api_secret = "V8GTv2DjmX6VE1qbyIWtfo7YKMo"
-)
 
 # 1. LÓGICA DE CATEGORÍAS
 def asignar_categoria_pareja(fecha_1, fecha_2):
@@ -115,12 +108,8 @@ def procesar_registro():
 
         categoria = asignar_categoria_pareja(fecha_nac_1, fecha_nac_2)
 
-        archivo = request.files['comprobante']
-        if archivo.filename != '':
-            respuesta_nube = cloudinary.uploader.upload(archivo)
-            enlace_imagen = respuesta_nube.get('secure_url')
-        else:
-            enlace_imagen = "sin_comprobante.png"
+        # ¡MAGIA AQUÍ! Ya no subimos archivo a la nube, la respuesta es inmediata
+        enlace_imagen = "Pago en efectivo el día del evento"
 
         fecha_exacta = hora_hidalgo.strftime('%Y-%m-%d %H:%M:%S')
 
@@ -140,6 +129,7 @@ def procesar_registro():
         folio = cursor.fetchone()[0] 
         
         conexion.commit()
+        cursor.close()
         conexion.close()
 
         return render_template('exito.html', folio=folio, nombre_1=nombre_1, nombre_2=nombre_2, categoria=categoria)
