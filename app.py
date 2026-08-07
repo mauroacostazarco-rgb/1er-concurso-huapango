@@ -167,29 +167,24 @@ def logout():
 
 @app.route('/admin')
 def panel_admin():
-    # Candado: Si no está logueado, lo regresamos a la pantalla de login
     if 'admin_logueado' not in session:
         return redirect(url_for('login'))
 
     conexion = psycopg2.connect(URL_BASE_DATOS)
     cursor = conexion.cursor()
-    
-    # 1. Obtener todos los registros para mostrar en la tabla de abajo
     cursor.execute('SELECT * FROM parejas ORDER BY id DESC')
     datos = cursor.fetchall()
     
-    # 2. NUEVO: Obtener parejas DISPONIBLES (que no han sido calificadas) para el Semáforo
+    # ACTUALIZACIÓN: Ahora también traemos el "estilo" de la base de datos
     cursor.execute('''
-        SELECT id, categoria_asignada, nombre_1, nombre_2 
+        SELECT id, categoria_asignada, nombre_1, nombre_2, estilo 
         FROM parejas 
         WHERE id NOT IN (SELECT DISTINCT folio_pareja FROM calificaciones)
         ORDER BY id ASC
     ''')
     parejas_disponibles = cursor.fetchall()
-    
     conexion.close()
     
-    # Mandamos ambos paquetes de datos al HTML
     return render_template('admin.html', parejas=datos, disponibles=parejas_disponibles)
 
 @app.route('/descargar_excel')
@@ -304,37 +299,36 @@ def procesar_login_juez():
 
 @app.route('/pista_juez')
 def pista_juez():
-    # Cadenero de seguridad: Si no hay sesión, lo regresamos al login
     if 'juez_id' not in session:
         return redirect('/juez')
     
     conexion = psycopg2.connect(URL_BASE_DATOS)
     cursor = conexion.cursor()
     
-    # 1. Leemos el semáforo
     cursor.execute("SELECT estado, categoria_actual, folio_1, folio_2, folio_3, folio_4 FROM pista_activa WHERE id = 1")
     semaforo = cursor.fetchone()
     
-    estado = semaforo[0]
-    categoria = semaforo[1]
-    folios_en_pista = [f for f in [semaforo[2], semaforo[3], semaforo[4], semaforo[5]] if f is not None]
+    # 🛡️ ESCUDO ANTI-ERROR 500: Si la tabla está vacía, no crasheamos
+    if not semaforo:
+        estado = 'inactiva'
+        categoria = None
+        folios_en_pista = []
+    else:
+        estado = semaforo[0]
+        categoria = semaforo[1]
+        folios_en_pista = [f for f in [semaforo[2], semaforo[3], semaforo[4], semaforo[5]] if f is not None]
     
     parejas_activas = []
-    folios_ya_calificados = [] # <--- NUEVO: Memoria del juez
+    folios_ya_calificados = [] 
     
-    # 2. Si la pista está activa, buscamos a las parejas y revisamos el candado
     if estado == 'calificando' and folios_en_pista:
         placeholders = ','.join(['%s'] * len(folios_en_pista))
-        
-        # Obtenemos los datos de las parejas
         query = f"SELECT id, estilo FROM parejas WHERE id IN ({placeholders}) ORDER BY id"
         cursor.execute(query, tuple(folios_en_pista))
         parejas_activas = cursor.fetchall()
         
-        # NUEVO: Buscamos cuáles de estos folios YA calificó este juez en específico
         query_calificados = f"SELECT folio_pareja FROM calificaciones WHERE id_juez = %s AND folio_pareja IN ({placeholders})"
         cursor.execute(query_calificados, [session['juez_id']] + folios_en_pista)
-        # Convertimos la respuesta en una lista fácil de leer (Ej. [12, 15])
         folios_ya_calificados = [row[0] for row in cursor.fetchall()]
         
     cursor.close()
@@ -423,12 +417,20 @@ def activar_pista():
     conexion = psycopg2.connect(URL_BASE_DATOS)
     cursor = conexion.cursor()
     
-    cursor.execute("""
-        UPDATE pista_activa 
-        SET categoria_actual = %s, folio_1 = %s, folio_2 = %s, folio_3 = %s, folio_4 = %s, 
-            estado = 'calificando', ultima_actualizacion = CURRENT_TIMESTAMP
-        WHERE id = 1
-    """, (categoria, f1, f2, f3, f4))
+    # 🛡️ ESCUDO: Si no existe el registro de la pista, lo creamos desde cero
+    cursor.execute("SELECT id FROM pista_activa WHERE id = 1")
+    if not cursor.fetchone():
+        cursor.execute("""
+            INSERT INTO pista_activa (id, categoria_actual, folio_1, folio_2, folio_3, folio_4, estado, ultima_actualizacion) 
+            VALUES (1, %s, %s, %s, %s, %s, 'calificando', CURRENT_TIMESTAMP)
+        """, (categoria, f1, f2, f3, f4))
+    else:
+        cursor.execute("""
+            UPDATE pista_activa 
+            SET categoria_actual = %s, folio_1 = %s, folio_2 = %s, folio_3 = %s, folio_4 = %s, 
+                estado = 'calificando', ultima_actualizacion = CURRENT_TIMESTAMP
+            WHERE id = 1
+        """, (categoria, f1, f2, f3, f4))
     
     conexion.commit()
     cursor.close()

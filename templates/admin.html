@@ -181,55 +181,45 @@
 
     </div>
 
-    <!-- SCRIPT DEL SEMÁFORO INTELIGENTE -->
+    <!-- SCRIPT DEL SEMÁFORO INTELIGENTE (ACTUALIZADO) -->
     <script>
-        // Python nos inyecta el diccionario de parejas disponibles
         const parejasDisponibles = [
             {% for p in disponibles %}
-                { id: {{ p[0] }}, categoria: "{{ p[1] }}", nombre1: "{{ p[2] }}", nombre2: "{{ p[3] }}" },
+                // Recibimos el estilo desde Python
+                { id: {{ p[0] }}, categoria: "{{ p[1] }}", nombre1: "{{ p[2] }}", nombre2: "{{ p[3] }}", estilo: "{{ p[4] }}" },
             {% endfor %}
         ];
 
         const selectCategoria = document.getElementById('select-categoria');
         const selectsFolio = document.querySelectorAll('.select-folio');
 
-        // Función 1: Se ejecuta al cambiar la categoría
         function filtrarParejas() {
             const categoriaSeleccionada = selectCategoria.value;
-            
-            // Filtramos las parejas disponibles que coinciden con la categoría
             const parejasFiltradas = parejasDisponibles.filter(p => p.categoria === categoriaSeleccionada);
             
-            // Limpiamos y rellenamos los 4 menús desplegables
             selectsFolio.forEach(select => {
-                select.innerHTML = '<option value="">-- Seleccionar --</option>'; // Limpiar
+                select.innerHTML = '<option value="">-- Seleccionar --</option>'; 
                 
                 parejasFiltradas.forEach(p => {
                     const opcion = document.createElement('option');
                     opcion.value = p.id;
-                    // Mostramos el Folio y el primer nombre de cada integrante
                     const nom1 = p.nombre1.split(" ")[0];
                     const nom2 = p.nombre2.split(" ")[0];
-                    opcion.textContent = `Folio #${p.id} - ${nom1} y ${nom2}`;
+                    // MAGIA AQUÍ: Ahora se lee "Folio #1 - Juan y Ana (Hidalguense)"
+                    opcion.textContent = `Folio #${p.id} - ${nom1} y ${nom2} (${p.estilo})`;
                     select.appendChild(opcion);
                 });
             });
             
-            bloquearDuplicados(); // Refrescamos bloqueos
+            bloquearDuplicados();
         }
 
-        // Función 2: Se ejecuta cada vez que seleccionas un folio
         function bloquearDuplicados() {
-            // Obtenemos qué folios ya fueron seleccionados en los 4 cuadros
             const foliosElegidos = Array.from(selectsFolio).map(s => s.value).filter(v => v !== "");
             
-            // Recorremos cada cuadro
             selectsFolio.forEach(select => {
-                // Recorremos las opciones dentro de cada cuadro
                 Array.from(select.options).forEach(opcion => {
-                    if (opcion.value === "") return; // Ignoramos el "-- Seleccionar --"
-                    
-                    // Si el folio ya está elegido en otro cuadro distinto, lo desactivamos (gris)
+                    if (opcion.value === "") return;
                     if (foliosElegidos.includes(opcion.value) && select.value !== opcion.value) {
                         opcion.disabled = true;
                     } else {
@@ -239,6 +229,6 @@
             });
         }
     </script>
-
+    
 </body>
 </html>
