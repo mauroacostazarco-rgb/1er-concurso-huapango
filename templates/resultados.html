@@ -22,10 +22,14 @@
         
         <header class="d-flex justify-content-between align-items-center mb-5 border-bottom pb-3">
             <div>
-                <h1 class="fw-bold text-guinda mb-0">🏆 Tabla de Posiciones y Resultados</h1>
-                <p class="text-muted fs-5">Puntajes sumados en tiempo real</p>
+                <h1 class="fw-bold text-guinda mb-0">🏆 Tabla de Posiciones</h1>
+                <p class="text-muted fs-5">Resultados calculados en tiempo real</p>
             </div>
-            <div>
+            <div class="d-flex gap-2">
+                <!-- NUEVO BOTÓN DE ACTUALIZAR CON MEMORIA -->
+                <button onclick="window.location.reload();" class="btn btn-success fw-bold shadow-sm" style="background-color: #198754; border: none;">
+                    🔄 Actualizar Resultados
+                </button>
                 <a href="/admin" class="btn btn-outline-secondary fw-bold btn-lg">← Volver al Panel</a>
             </div>
         </header>
@@ -109,5 +113,33 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- SCRIPT PARA MEMORIA DE PESTAÑAS -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Buscamos todas las pestañas tipo "pill"
+            var tabs = document.querySelectorAll('button[data-bs-toggle="pill"]');
+
+            // Revisamos si el navegador recuerda en qué pestaña estábamos
+            var activeTabId = localStorage.getItem('pestanaHuapango');
+            
+            if (activeTabId) {
+                // Si hay memoria, activamos esa pestaña automáticamente
+                var tabToActivate = document.querySelector('button[data-bs-target="' + activeTabId + '"]');
+                if (tabToActivate) {
+                    var tab = new bootstrap.Tab(tabToActivate);
+                    tab.show();
+                }
+            }
+
+            // Cada vez que le des clic a una pestaña, guardamos su ID en la memoria
+            tabs.forEach(function(tabElement) {
+                tabElement.addEventListener('shown.bs.tab', function (event) {
+                    var currentTarget = event.target.getAttribute('data-bs-target');
+                    localStorage.setItem('pestanaHuapango', currentTarget);
+                });
+            });
+        });
+    </script>
 </body>
 </html>
