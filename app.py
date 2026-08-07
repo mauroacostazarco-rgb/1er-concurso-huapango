@@ -256,7 +256,13 @@ def eliminar_juez(id_juez):
         
     conexion = psycopg2.connect(URL_BASE_DATOS)
     cursor = conexion.cursor()
+    
+    # 1. Liberamos el candado: Borramos las calificaciones de prueba que haya dado este juez
+    cursor.execute("DELETE FROM calificaciones WHERE id_juez = %s", (id_juez,))
+    
+    # 2. Ahora sí, borramos al juez sin que el servidor marque error
     cursor.execute("DELETE FROM jueces WHERE id = %s", (id_juez,))
+    
     conexion.commit()
     cursor.close()
     conexion.close()
