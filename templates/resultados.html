@@ -50,7 +50,7 @@
             </li>
         </ul>
 
-<!-- Contenido de las Tablas -->
+        <!-- Contenido de las Tablas -->
         <div class="tab-content shadow-sm bg-white p-4 rounded-4" id="pills-tabContent">
             
             {% set categorias_ids = [
@@ -76,13 +76,11 @@
                         <div class="mb-5">
                             <h4 class="fw-bold mb-3" style="color: #115236;">💃 Estilo {{ estilo }}</h4>
                             <div class="table-responsive">
-                                <table class="table table-hover align-middle fs-6">
+                                <table class="table table-hover align-middle fs-5"> <!-- Aumentamos un poco el tamaño de letra general (fs-5) -->
                                     <thead class="bg-dorado text-white">
                                         <tr>
                                             <th class="text-center">Lugar</th>
-                                            <th>Folio</th>
-                                            <th>Pareja</th>
-                                            <th>Procedencia</th>
+                                            <th class="text-center">Folio</th>
                                             <!-- Columnas Dinámicas para los 6 Jueces -->
                                             {% for j in jueces %}
                                                 <th class="text-center" title="{{ j[1] }}">Juez {{ loop.index }}</th>
@@ -94,24 +92,23 @@
                                         {% for pareja in parejas_estilo %}
                                         <tr class="{% if loop.index == 1 %}podio-1 fw-bold{% elif loop.index == 2 %}podio-2 fw-bold{% elif loop.index == 3 %}podio-3 fw-bold{% endif %}">
                                             
-                                            <td class="text-center fs-4">
+                                            <td class="text-center fs-3">
                                                 {% if loop.index == 1 %} 🥇
                                                 {% elif loop.index == 2 %} 🥈
                                                 {% elif loop.index == 3 %} 🥉
-                                                {% else %} <span class="text-muted fs-6">{{ loop.index }}</span>
+                                                {% else %} <span class="text-muted fs-5">{{ loop.index }}</span>
                                                 {% endif %}
                                             </td>
                                             
-                                            <td class="text-guinda fw-bold">#{{ pareja[0] }}</td>
-                                            <td>{{ pareja[1] }} <br> <small class="text-muted">{{ pareja[2] }}</small></td>
-                                            <td>{{ pareja[3] }}, {{ pareja[4] }}</td>
+                                            <!-- Folio centrado y destacado -->
+                                            <td class="text-center text-guinda fw-bold fs-4">#{{ pareja[0] }}</td>
                                             
                                             <!-- Imprimir las calificaciones individuales de cada juez -->
                                             {% for punto in pareja[5] %}
                                                 <td class="text-center text-secondary fw-bold">{{ punto }}</td>
                                             {% endfor %}
                                             
-                                            <td class="text-center text-success fw-bold fs-4">
+                                            <td class="text-center text-success fw-bold fs-3">
                                                 {{ pareja[6] }}
                                             </td>
                                             
