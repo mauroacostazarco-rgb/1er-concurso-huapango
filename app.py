@@ -221,18 +221,27 @@ def agregar_juez():
     if 'admin_logueado' not in session:
         return redirect(url_for('login'))
         
+    conexion = psycopg2.connect(URL_BASE_DATOS)
+    cursor = conexion.cursor()
+    
+    # 🔒 CANDADO: Verificar que no haya más de 6 jueces
+    cursor.execute("SELECT COUNT(*) FROM jueces")
+    total_jueces = cursor.fetchone()[0]
+    if total_jueces >= 6:
+        cursor.close()
+        conexion.close()
+        return redirect('/admin_jueces') # No deja agregar más si ya son 6
+
     nombre_real = request.form.get('nombre_real')
     usuario = request.form.get('usuario')
     password = request.form.get('password')
     
-    conexion = psycopg2.connect(URL_BASE_DATOS)
-    cursor = conexion.cursor()
     try:
         cursor.execute("INSERT INTO jueces (nombre_real, usuario, password) VALUES (%s, %s, %s)", 
                        (nombre_real, usuario, password))
         conexion.commit()
     except psycopg2.IntegrityError:
-        conexion.rollback() # Ignora si el usuario ya existe para no chocar
+        conexion.rollback() 
     finally:
         cursor.close()
         conexion.close()
@@ -455,48 +464,66 @@ def desactivar_pista():
 # ==========================================
 @app.route('/resultados')
 def panel_resultados():
-    # Candado de seguridad
     if 'admin_logueado' not in session:
         return redirect(url_for('login'))
 
     conexion = psycopg2.connect(URL_BASE_DATOS)
     cursor = conexion.cursor()
     
-    # 1. Consulta SQL que suma los puntos de todos los jueces y los ordena
+    # 1. Traemos a los jueces (Para generar las 6 columnas)
+    cursor.execute("SELECT id, nombre_real FROM jueces ORDER BY id ASC")
+    jueces = cursor.fetchall()
+
+    # 2. Traemos TODAS las calificaciones individuales
+    cursor.execute("SELECT folio_pareja, id_juez, total FROM calificaciones")
+    califs_crudas = cursor.fetchall()
+    # Creamos un diccionario rápido: {(folio, id_juez): puntos}
+    mapa_califs = {(c[0], c[1]): c[2] for c in califs_crudas}
+
+    # 3. Traemos a las parejas ordenadas por categoría, estilo y puntaje total
     cursor.execute("""
         SELECT 
+            p.categoria_asignada, 
+            p.estilo, 
             p.id as folio, 
             p.nombre_1, 
             p.nombre_2, 
             p.municipio, 
             p.estado,
-            p.estilo,
-            p.categoria_asignada,
-            SUM(c.total) as puntaje_total,
-            COUNT(c.id_juez) as jueces_evaluadores
+            SUM(c.total) as puntaje_total
         FROM parejas p
         INNER JOIN calificaciones c ON p.id = c.folio_pareja
-        GROUP BY p.id, p.nombre_1, p.nombre_2, p.municipio, p.estado, p.estilo, p.categoria_asignada
-        ORDER BY p.categoria_asignada, puntaje_total DESC
+        GROUP BY p.categoria_asignada, p.estilo, p.id, p.nombre_1, p.nombre_2, p.municipio, p.estado
+        ORDER BY p.categoria_asignada, p.estilo, puntaje_total DESC
     """)
-    
     datos_crudos = cursor.fetchall()
     conexion.close()
 
-    # 2. Separamos los resultados en "cajitas" por categoría para mandarlos limpios al HTML
-    resultados_por_categoria = {
-        "Pequeños Huapangueros": [],
-        "Infantil": [],
-        "Juvenil": [],
-        "Adultos": []
-    }
+    # 4. Construimos las "cajitas" ordenadas para el HTML
+    categorias_nombres = ["Pequeños Huapangueros", "Infantil", "Juvenil", "Adultos"]
+    estilos_nombres = ["Hidalguense", "Queretano", "Potosino", "Tamaulipeco", "Veracruzano", "Poblano"]
+    
+    resultados_organizados = {cat: {est: [] for est in estilos_nombres} for cat in categorias_nombres}
     
     for fila in datos_crudos:
-        categoria = fila[6]
-        if categoria in resultados_por_categoria:
-            resultados_por_categoria[categoria].append(fila)
+        cat = fila[0]
+        est = fila[1]
+        folio = fila[2]
+        
+        # Juntamos los puntos exactos de los 6 jueces para esta pareja
+        puntos_por_juez = []
+        for j in jueces:
+            id_juez = j[0]
+            puntos = mapa_califs.get((folio, id_juez), '-') # Si un juez faltó, pone un guión
+            puntos_por_juez.append(puntos)
 
-    return render_template('resultados.html', resultados=resultados_por_categoria)
+        # Empaquetamos todo: [folio, nom_1, nom_2, muni, estado, lista_jueces, total]
+        pareja_data = [folio, fila[3], fila[4], fila[5], fila[6], puntos_por_juez, fila[7]]
+        
+        if cat in resultados_organizados and est in resultados_organizados[cat]:
+            resultados_organizados[cat][est].append(pareja_data)
+
+    return render_template('resultados.html', resultados=resultados_organizados, jueces=jueces)
 
 # ==========================================
 # ZONA DE PELIGRO: LIMPIEZA DE BASE DE DATOS

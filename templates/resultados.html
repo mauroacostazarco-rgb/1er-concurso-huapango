@@ -50,7 +50,7 @@
             </li>
         </ul>
 
-        <!-- Contenido de las Tablas -->
+<!-- Contenido de las Tablas -->
         <div class="tab-content shadow-sm bg-white p-4 rounded-4" id="pills-tabContent">
             
             {% set categorias_ids = [
@@ -59,53 +59,78 @@
                 ('juvenil', 'Juvenil'), 
                 ('adultos', 'Adultos')
             ] %}
+            
+            {% set estilos_orden = ['Hidalguense', 'Queretano', 'Potosino', 'Tamaulipeco', 'Veracruzano', 'Poblano'] %}
 
             {% for id_html, nombre_cat in categorias_ids %}
             <div class="tab-pane fade {% if loop.first %}show active{% endif %}" id="{{ id_html }}">
-                <h3 class="text-guinda fw-bold mb-4">Resultados: {{ nombre_cat }}</h3>
+                <h3 class="text-guinda fw-bold mb-4 border-bottom pb-2">🏆 Campeones: {{ nombre_cat }}</h3>
                 
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle fs-5">
-                        <thead class="bg-dorado text-white">
-                            <tr>
-                                <th class="text-center">Posición</th>
-                                <th>Folio</th>
-                                <th>Pareja</th>
-                                <th>Procedencia</th>
-                                <th>Estilo</th>
-                                <th class="text-center">Puntaje Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for fila in resultados[nombre_cat] %}
-                            <tr class="{% if loop.index == 1 %}podio-1 fw-bold{% elif loop.index == 2 %}podio-2 fw-bold{% elif loop.index == 3 %}podio-3 fw-bold{% endif %}">
-                                
-                                <td class="text-center fs-3">
-                                    {% if loop.index == 1 %} 🥇
-                                    {% elif loop.index == 2 %} 🥈
-                                    {% elif loop.index == 3 %} 🥉
-                                    {% else %} <span class="text-muted fs-6">{{ loop.index }}</span>
-                                    {% endif %}
-                                </td>
-                                
-                                <td class="text-guinda fw-bold">#{{ fila[0] }}</td>
-                                <td>{{ fila[1] }} <br> <small class="text-muted">{{ fila[2] }}</small></td>
-                                <td>{{ fila[3] }}, {{ fila[4] }}</td>
-                                <td>{{ fila[5] }}</td>
-                                
-                                <td class="text-center text-success fw-bold fs-4">
-                                    {{ fila[7] }} <span class="fs-6 text-muted fw-normal">pts</span>
-                                </td>
-                                
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="6" class="text-center py-5 text-muted">Aún no hay calificaciones registradas para esta categoría.</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+                {% set ns = namespace(hay_datos=false) %}
+                
+                {% for estilo in estilos_orden %}
+                    {% set parejas_estilo = resultados[nombre_cat][estilo] %}
+                    
+                    {% if parejas_estilo %}
+                        {% set ns.hay_datos = true %}
+                        <div class="mb-5">
+                            <h4 class="fw-bold mb-3" style="color: #115236;">💃 Estilo {{ estilo }}</h4>
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle fs-6">
+                                    <thead class="bg-dorado text-white">
+                                        <tr>
+                                            <th class="text-center">Lugar</th>
+                                            <th>Folio</th>
+                                            <th>Pareja</th>
+                                            <th>Procedencia</th>
+                                            <!-- Columnas Dinámicas para los 6 Jueces -->
+                                            {% for j in jueces %}
+                                                <th class="text-center" title="{{ j[1] }}">Juez {{ loop.index }}</th>
+                                            {% endfor %}
+                                            <th class="text-center text-dark fs-5">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for pareja in parejas_estilo %}
+                                        <tr class="{% if loop.index == 1 %}podio-1 fw-bold{% elif loop.index == 2 %}podio-2 fw-bold{% elif loop.index == 3 %}podio-3 fw-bold{% endif %}">
+                                            
+                                            <td class="text-center fs-4">
+                                                {% if loop.index == 1 %} 🥇
+                                                {% elif loop.index == 2 %} 🥈
+                                                {% elif loop.index == 3 %} 🥉
+                                                {% else %} <span class="text-muted fs-6">{{ loop.index }}</span>
+                                                {% endif %}
+                                            </td>
+                                            
+                                            <td class="text-guinda fw-bold">#{{ pareja[0] }}</td>
+                                            <td>{{ pareja[1] }} <br> <small class="text-muted">{{ pareja[2] }}</small></td>
+                                            <td>{{ pareja[3] }}, {{ pareja[4] }}</td>
+                                            
+                                            <!-- Imprimir las calificaciones individuales de cada juez -->
+                                            {% for punto in pareja[5] %}
+                                                <td class="text-center text-secondary fw-bold">{{ punto }}</td>
+                                            {% endfor %}
+                                            
+                                            <td class="text-center text-success fw-bold fs-4">
+                                                {{ pareja[6] }}
+                                            </td>
+                                            
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+
+                <!-- Mensaje por si la categoría entera está vacía -->
+                {% if not ns.hay_datos %}
+                    <div class="text-center py-5 text-muted fs-5">
+                        Aún no hay calificaciones registradas para la categoría {{ nombre_cat }}.
+                    </div>
+                {% endif %}
+
             </div>
             {% endfor %}
 
