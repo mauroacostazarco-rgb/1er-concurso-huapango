@@ -24,7 +24,7 @@ FECHA_CIERRE = datetime(2026, 9, 11, 12, 0, 0)
 URL_BASE_DATOS = "postgresql://postgres.hszcoiulvjkuhhycodvd:Z!m4p4n_Huapang0@aws-1-us-east-1.pooler.supabase.com:5432/postgres"
 
 
-# 1. LÓGICA DE CATEGORÍAS
+# 1. LÓGICA DE CATEGORÍAS (ACTUALIZADA)
 def asignar_categoria_pareja(fecha_1, fecha_2):
     def obtener_edad(fecha_nacimiento):
         fecha_nac = datetime.strptime(fecha_nacimiento, '%Y-%m-%d')
@@ -36,9 +36,8 @@ def asignar_categoria_pareja(fecha_1, fecha_2):
     edad_2 = obtener_edad(fecha_2)
     edad_mayor = max(edad_1, edad_2)
 
-    if edad_mayor <= 6:
-        return "Pequeños Huapangueros"
-    elif edad_mayor <= 12:
+    # Solo 3 categorías oficiales
+    if edad_mayor <= 12:
         return "Infantil"
     elif edad_mayor <= 17:
         return "Juvenil"
@@ -499,8 +498,8 @@ def panel_resultados():
     datos_crudos = cursor.fetchall()
     conexion.close()
 
-    # 4. Construimos las "cajitas" ordenadas para el HTML
-    categorias_nombres = ["Pequeños Huapangueros", "Infantil", "Juvenil", "Adultos"]
+# 4. Construimos las "cajitas" ordenadas para el HTML
+    categorias_nombres = ["Infantil", "Juvenil", "Adultos"]
     estilos_nombres = ["Hidalguense", "Queretano", "Potosino", "Tamaulipeco", "Veracruzano", "Poblano"]
     
     resultados_organizados = {cat: {est: [] for est in estilos_nombres} for cat in categorias_nombres}
