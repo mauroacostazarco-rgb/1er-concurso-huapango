@@ -132,12 +132,18 @@
                         </div>
                     </div>
 
-                    <div class="row mb-5">
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Teléfono de Contacto (WhatsApp)</label>
-                            <input type="tel" class="form-control border-secondary" name="telefono" placeholder="Ej. 772 123 4567" required>
-                            <div class="form-text text-dark">Nos comunicaremos a este número en caso de dudas con su registro.</div>
-                        </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Teléfono de Contacto (WhatsApp)</label>
+                        <!-- INPUT ACTUALIZADO: Bloqueo estricto a 10 números -->
+                        <input type="tel" class="form-control border-secondary" id="telefono" name="telefono" 
+                            placeholder="Ej. 7721234567" 
+                            maxlength="10" 
+                            minlength="10" 
+                            pattern="[0-9]{10}" 
+                            title="El teléfono debe tener exactamente 10 números, sin espacios ni letras."
+                            oninput="this.value = this.value.replace(/[^0-9]/g, '')" 
+                            required>
+                        <div class="form-text text-dark">Ingresa exactamente 10 dígitos, sin espacios ni guiones. Nos comunicaremos a este número en caso de dudas.</div>
                     </div>
 
                     <h4 class="mb-4 pb-2 border-bottom border-dorado text-guinda fw-bold">2. Detalles de Participación</h4>
