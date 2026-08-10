@@ -16,7 +16,7 @@ USUARIO_ADMIN = "admin"
 PASSWORD_ADMIN = "Zimapan2026*"
 
 # Fecha de cierre: Año(2026), Mes(9), Día(11), Hora(12), Minuto(0), Segundo(0)
-FECHA_CIERRE = datetime(2026, 9, 11, 19, 30, 0)
+FECHA_CIERRE = datetime(2026, 9, 11, 19, 0, 0)
 
 # ========================================================
 # 🔑 TUS LLAVES DE BÓVEDA
