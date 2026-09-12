@@ -650,6 +650,52 @@ def importar_excel():
         <p style="margin-top: 20px; color: #555;"><b>Importante:</b> El archivo debe estar guardado como <b>CSV (Delimitado por comas)</b>.</p>
     </div>
     '''
+# ==========================================
+# 🚨 HERRAMIENTA DE EMERGENCIA: LIBERAR FOLIOS DUPLICADOS
+# ==========================================
+@app.route('/liberar_folio', methods=['GET', 'POST'])
+def liberar_folio():
+    if 'admin_logueado' not in session:
+        return redirect(url_for('login'))
+
+    mensaje = ""
+    if request.method == 'POST':
+        folio = request.form.get('folio')
+        
+        if folio:
+            conexion = psycopg2.connect(URL_BASE_DATOS)
+            cursor = conexion.cursor()
+            try:
+                # 1. Borramos calificaciones si algún juez lo tocó por accidente
+                cursor.execute("DELETE FROM calificaciones WHERE folio_pareja = %s", (folio,))
+                
+                # 2. Borramos el registro original para dejar el hueco libre
+                cursor.execute("DELETE FROM parejas WHERE id = %s", (folio,))
+                conexion.commit()
+                
+                mensaje = f"✅ ¡ÉXITO! El Folio #{folio} ha sido eliminado. La mesa ya puede usarlo."
+            except Exception as e:
+                conexion.rollback()
+                mensaje = f"❌ Ocurrió un error: {e}"
+            finally:
+                cursor.close()
+                conexion.close()
+
+    return f'''
+    <div style="font-family: Arial; text-align: center; margin-top: 50px;">
+        <h2 style="color: #691C32;">Liberar Folio (Borrar Duplicado)</h2>
+        <p style="font-size: 18px; color: #555;">Ingresa el folio fantasma que quieres destruir para que la mesa pueda reutilizarlo.</p>
+        
+        <form method="POST" style="background: #f4f4f4; padding: 30px; border-radius: 15px; display: inline-block; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <input type="number" name="folio" placeholder="Ej. 15" required style="font-size: 30px; padding: 10px; width: 150px; text-align: center; border: 2px solid #ccc; border-radius: 8px;"><br><br>
+            <button type="submit" style="padding: 15px 30px; background: #115236; color: white; border: none; border-radius: 10px; font-size: 20px; font-weight: bold; cursor: pointer;">Destruir Registro y Liberar Folio</button>
+        </form>
+        
+        <h3 style="color: #691C32; margin-top: 30px; font-size: 22px;">{mensaje}</h3>
+        <br><br>
+        <a href="/admin" style="text-decoration: none; color: #BC955C; font-weight: bold; font-size: 20px;">⬅ Volver al Semáforo</a>
+    </div>
+    '''
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
