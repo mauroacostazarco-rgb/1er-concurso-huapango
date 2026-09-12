@@ -577,6 +577,80 @@ def limpiar_participantes():
         
     return redirect(url_for('panel_admin'))
 
+# ==========================================
+# 🚨 HERRAMIENTA DE EMERGENCIA: CARGA MASIVA EXCEL (CSV)
+# ==========================================
+@app.route('/importar_excel', methods=['GET', 'POST'])
+def importar_excel():
+    if 'admin_logueado' not in session:
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        archivo = request.files['archivo']
+        if not archivo:
+            return "No se subió ningún archivo."
+        
+        # Guardamos el archivo temporalmente
+        ruta_temp = "temp.csv"
+        archivo.save(ruta_temp)
+        
+        hora_hidalgo = datetime.utcnow() - timedelta(hours=6)
+        fecha_exacta = hora_hidalgo.strftime('%Y-%m-%d %H:%M:%S')
+
+        conexion = psycopg2.connect(URL_BASE_DATOS)
+        cursor = conexion.cursor()
+        
+        # Leemos el archivo CSV
+        with open(ruta_temp, mode='r', encoding='utf-8-sig') as file:
+            lector = csv.reader(file)
+            next(lector, None) # Saltamos la fila 1 (los encabezados)
+            
+            for fila in lector:
+                # Nos aseguramos de que la fila tenga al menos 3 columnas
+                if len(fila) >= 3:
+                    folio = fila[0].strip()
+                    categoria = fila[1].strip()
+                    estilo = fila[2].strip()
+                    
+                    if folio: # Si el folio no está vacío
+                        # Inyectamos a la base de datos forzando el ID y rellenando lo demás
+                        cursor.execute('''
+                            INSERT INTO parejas (
+                                id, telefono, curp_1, nombre_1, fecha_nac_1, 
+                                curp_2, nombre_2, fecha_nac_2, 
+                                estado, municipio, estilo, 
+                                categoria_asignada, foto_comprobante, fecha_registro
+                            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            ON CONFLICT (id) DO NOTHING;
+                        ''', (folio, '0000000000', 'N/A', 'Bailarín 1 (Papel)', 'N/A', 
+                              'N/A', 'Bailarín 2 (Papel)', 'N/A', 'Pendiente', 'Pendiente', 
+                              estilo, categoria, 'Carga Masiva', fecha_exacta))
+        
+        conexion.commit()
+        cursor.close()
+        conexion.close()
+        
+        return '''
+        <div style="font-family: Arial; text-align: center; padding: 50px;">
+            <h1 style="color: #115236; font-size: 40px;">✅ CARGA MASIVA EXITOSA</h1>
+            <h2>Todos los participantes están listos para los jueces.</h2>
+            <br>
+            <a href="/admin" style="padding: 15px 30px; background: #691C32; color: white; text-decoration: none; border-radius: 10px; font-size: 20px;">Volver al Semáforo</a>
+        </div>
+        '''
+
+    # Interfaz para subir el archivo
+    return '''
+    <div style="text-align: center; margin-top: 50px; font-family: Arial;">
+        <h2 style="color: #691C32;">Subir Archivo de Captura (CSV)</h2>
+        <form method="POST" enctype="multipart/form-data" style="background: #f4f4f4; padding: 30px; border-radius: 15px; display: inline-block;">
+            <input type="file" name="archivo" accept=".csv" required style="font-size: 18px;"><br><br><br>
+            <button type="submit" style="padding: 15px 30px; background: #BC955C; color: white; border: none; border-radius: 10px; font-size: 18px; cursor: pointer;">Subir e Importar Datos</button>
+        </form>
+        <p style="margin-top: 20px; color: #555;"><b>Importante:</b> El archivo debe estar guardado como <b>CSV (Delimitado por comas)</b>.</p>
+    </div>
+    '''
+
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
