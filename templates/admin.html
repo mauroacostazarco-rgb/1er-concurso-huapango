@@ -63,7 +63,7 @@
 
         </header>
 
-        <!-- ========================================== -->
+<!-- ========================================== -->
         <!-- PANEL DE CONTROL DE PISTA INTELIGENTE      -->
         <!-- ========================================== -->
         <div class="card mb-5" style="border-radius: 15px; border-top: 6px solid #115236; box-shadow: 0 10px 20px rgba(0,0,0,0.1);">
@@ -83,28 +83,45 @@
                         </div>
                     </div>
 
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-3">
+                    <!-- PRIMERA FILA: Parejas 1, 2 y 3 -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
                             <label class="form-label fw-bold" style="color: #691C32;">Pareja 1</label>
                             <select class="form-select form-select-lg shadow-sm select-folio" name="folio_1" onchange="bloquearDuplicados()">
                                 <option value="">-- Seleccionar --</option>
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <label class="form-label fw-bold" style="color: #691C32;">Pareja 2</label>
                             <select class="form-select form-select-lg shadow-sm select-folio" name="folio_2" onchange="bloquearDuplicados()">
                                 <option value="">-- Seleccionar --</option>
                             </select>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <label class="form-label fw-bold" style="color: #691C32;">Pareja 3</label>
                             <select class="form-select form-select-lg shadow-sm select-folio" name="folio_3" onchange="bloquearDuplicados()">
                                 <option value="">-- Seleccionar --</option>
                             </select>
                         </div>
-                        <div class="col-md-3">
+                    </div>
+
+                    <!-- SEGUNDA FILA: Parejas 4, 5 y 6 -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
                             <label class="form-label fw-bold" style="color: #691C32;">Pareja 4</label>
                             <select class="form-select form-select-lg shadow-sm select-folio" name="folio_4" onchange="bloquearDuplicados()">
+                                <option value="">-- Seleccionar --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold" style="color: #691C32;">Pareja 5 (Opcional)</label>
+                            <select class="form-select form-select-lg shadow-sm select-folio" name="folio_5" onchange="bloquearDuplicados()">
+                                <option value="">-- Seleccionar --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold" style="color: #691C32;">Pareja 6 (Opcional)</label>
+                            <select class="form-select form-select-lg shadow-sm select-folio" name="folio_6" onchange="bloquearDuplicados()">
                                 <option value="">-- Seleccionar --</option>
                             </select>
                         </div>

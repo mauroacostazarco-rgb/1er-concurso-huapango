@@ -420,6 +420,9 @@ def activar_pista():
     f2 = request.form.get('folio_2') if request.form.get('folio_2') else None
     f3 = request.form.get('folio_3') if request.form.get('folio_3') else None
     f4 = request.form.get('folio_4') if request.form.get('folio_4') else None
+    # Añadimos la captura de los folios 5 y 6
+    f5 = request.form.get('folio_5') if request.form.get('folio_5') else None
+    f6 = request.form.get('folio_6') if request.form.get('folio_6') else None
     
     conexion = psycopg2.connect(URL_BASE_DATOS)
     cursor = conexion.cursor()
@@ -428,16 +431,16 @@ def activar_pista():
     cursor.execute("SELECT id FROM pista_activa WHERE id = 1")
     if not cursor.fetchone():
         cursor.execute("""
-            INSERT INTO pista_activa (id, categoria_actual, folio_1, folio_2, folio_3, folio_4, estado, ultima_actualizacion) 
-            VALUES (1, %s, %s, %s, %s, %s, 'calificando', CURRENT_TIMESTAMP)
-        """, (categoria, f1, f2, f3, f4))
+            INSERT INTO pista_activa (id, categoria_actual, folio_1, folio_2, folio_3, folio_4, folio_5, folio_6, estado, ultima_actualizacion) 
+            VALUES (1, %s, %s, %s, %s, %s, %s, %s, 'calificando', CURRENT_TIMESTAMP)
+        """, (categoria, f1, f2, f3, f4, f5, f6))
     else:
         cursor.execute("""
             UPDATE pista_activa 
-            SET categoria_actual = %s, folio_1 = %s, folio_2 = %s, folio_3 = %s, folio_4 = %s, 
+            SET categoria_actual = %s, folio_1 = %s, folio_2 = %s, folio_3 = %s, folio_4 = %s, folio_5 = %s, folio_6 = %s, 
                 estado = 'calificando', ultima_actualizacion = CURRENT_TIMESTAMP
             WHERE id = 1
-        """, (categoria, f1, f2, f3, f4))
+        """, (categoria, f1, f2, f3, f4, f5, f6))
     
     conexion.commit()
     cursor.close()
