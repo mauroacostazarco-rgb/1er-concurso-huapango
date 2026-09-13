@@ -701,53 +701,60 @@ def liberar_folio():
     '''
 
 # ==========================================
-# 💾 EXPORTAR RESULTADOS A EXCEL (CSV)
+# 💾 EXPORTAR RESULTADOS A EXCEL (VERSIÓN BLINDADA)
 # ==========================================
 @app.route('/exportar_resultados')
 def exportar_resultados():
+    # 1. Importamos todo AQUÍ ADENTRO para que no falle nada en el resto del archivo
+    import io
+    import csv
+    from flask import Response
+    
     if 'admin_logueado' not in session:
         return redirect(url_for('login'))
         
-    conexion = psycopg2.connect(URL_BASE_DATOS)
-    cursor = conexion.cursor()
-    
-    # Extraemos las calificaciones sumadas y ordenadas
-    cursor.execute('''
-        SELECT 
-            p.categoria_asignada,
-            p.estilo,
-            p.id,
-            p.nombre_1,
-            p.nombre_2,
-            SUM(c.vestuario + c.ritmo + c.precision + c.coreografia + c.dificultad + c.proyeccion) as total_puntos
-        FROM parejas p
-        JOIN calificaciones c ON p.id = c.folio_pareja
-        GROUP BY p.categoria_asignada, p.estilo, p.id, p.nombre_1, p.nombre_2
-        ORDER BY p.categoria_asignada ASC, p.estilo ASC, total_puntos DESC;
-    ''')
-    filas = cursor.fetchall()
-    cursor.close()
-    conexion.close()
-
-    # Generamos el archivo CSV en la memoria del servidor
-    output = io.StringIO()
-    # Escribimos el BOM de UTF-8 para que Excel en español reconozca los acentos automáticamente
-    output.write('\ufeff')
-    writer = csv.writer(output)
-    
-    # Creamos la fila de los encabezados
-    writer.writerow(['Categoría', 'Estilo', 'Folio', 'Bailarín 1', 'Bailarín 2', 'Puntaje Total'])
-    
-    # Vaciamos los datos de la base de datos al archivo
-    for fila in filas:
-        writer.writerow([fila[0], fila[1], fila[2], fila[3], fila[4], fila[5]])
+    try:
+        conexion = psycopg2.connect(URL_BASE_DATOS)
+        cursor = conexion.cursor()
         
-    # Empaquetamos todo y forzamos la descarga del archivo en el navegador
-    return Response(
-        output.getvalue(), 
-        mimetype="text/csv", 
-        headers={"Content-Disposition": "attachment;filename=Resultados_Eliminatoria_Huapango.csv"}
-    )
+        # Extraemos las calificaciones sumadas y ordenadas
+        cursor.execute('''
+            SELECT 
+                p.categoria_asignada,
+                p.estilo,
+                p.id,
+                p.nombre_1,
+                p.nombre_2,
+                SUM(c.vestuario + c.ritmo + c.precision + c.coreografia + c.dificultad + c.proyeccion) as total_puntos
+            FROM parejas p
+            JOIN calificaciones c ON p.id = c.folio_pareja
+            GROUP BY p.categoria_asignada, p.estilo, p.id, p.nombre_1, p.nombre_2
+            ORDER BY p.categoria_asignada ASC, p.estilo ASC, total_puntos DESC;
+        ''')
+        filas = cursor.fetchall()
+        cursor.close()
+        conexion.close()
+
+        # Generamos el archivo CSV
+        output = io.StringIO()
+        output.write('\ufeff') # Para que Excel lea bien los acentos
+        writer = csv.writer(output)
+        
+        # Encabezados
+        writer.writerow(['Categoría', 'Estilo', 'Folio', 'Bailarín 1', 'Bailarín 2', 'Puntaje Total'])
+        
+        # Datos
+        for fila in filas:
+            writer.writerow([fila[0], fila[1], fila[2], fila[3], fila[4], fila[5]])
+            
+        return Response(
+            output.getvalue(), 
+            mimetype="text/csv", 
+            headers={"Content-Disposition": "attachment;filename=Resultados_Eliminatoria_Huapango.csv"}
+        )
+    except Exception as e:
+        # Si algo falla en la base de datos, en lugar de pantalla blanca te dirá el error exacto
+        return f"<div style='padding: 50px; font-family: Arial;'><h2 style='color: red;'>Ocurrió un error técnico:</h2><p><b>{str(e)}</b></p><br><a href='/admin'>Volver al panel</a></div>"
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
