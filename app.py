@@ -725,7 +725,7 @@ def exportar_resultados():
                 p.id,
                 p.nombre_1,
                 p.nombre_2,
-                SUM(c.vestuario + c.ritmo + c.precision + c.coreografia + c.dificultad + c.proyeccion) as total_puntos
+                SUM(vestuario + ritmo + precision_paso + coreografia + dificultad + proyeccion) as total_puntos
             FROM parejas p
             JOIN calificaciones c ON p.id = c.folio_pareja
             GROUP BY p.categoria_asignada, p.estilo, p.id, p.nombre_1, p.nombre_2
