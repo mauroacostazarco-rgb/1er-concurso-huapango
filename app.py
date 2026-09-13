@@ -312,7 +312,7 @@ def pista_juez():
     conexion = psycopg2.connect(URL_BASE_DATOS)
     cursor = conexion.cursor()
     
-    cursor.execute("SELECT estado, categoria_actual, folio_1, folio_2, folio_3, folio_4 FROM pista_activa WHERE id = 1")
+    cursor.execute("SELECT folio_1, folio_2, folio_3, folio_4, folio_5, folio_6, categoria_actual, estado FROM pista_activa WHERE id = 1")
     semaforo = cursor.fetchone()
     
     # 🛡️ ESCUDO ANTI-ERROR 500: Si la tabla está vacía, no crasheamos
@@ -323,7 +323,7 @@ def pista_juez():
     else:
         estado = semaforo[0]
         categoria = semaforo[1]
-        folios_en_pista = [f for f in [semaforo[2], semaforo[3], semaforo[4], semaforo[5]] if f is not None]
+        folios_en_pista = [f for f in [semaforo[2], semaforo[3], semaforo[4], semaforo[5], semaforo[6], semaforo[7]] if f is not None]
     
     parejas_activas = []
     folios_ya_calificados = [] 
