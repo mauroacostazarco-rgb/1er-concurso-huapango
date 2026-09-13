@@ -3,7 +3,10 @@ from flask import Flask, render_template, request, send_file, session, redirect,
 from werkzeug.utils import secure_filename
 from datetime import datetime, timedelta
 import csv
-import psycopg2 
+import psycopg2
+import io
+import csv
+from flask import Response # Asegúrate de que Response esté en tus importaciones de flask
 
 app = Flask(__name__)
 # 🔒 Llave secreta necesaria para que el servidor recuerde quién inició sesión
@@ -696,6 +699,55 @@ def liberar_folio():
         <a href="/admin" style="text-decoration: none; color: #BC955C; font-weight: bold; font-size: 20px;">⬅ Volver al Semáforo</a>
     </div>
     '''
+
+# ==========================================
+# 💾 EXPORTAR RESULTADOS A EXCEL (CSV)
+# ==========================================
+@app.route('/exportar_resultados')
+def exportar_resultados():
+    if 'admin_logueado' not in session:
+        return redirect(url_for('login'))
+        
+    conexion = psycopg2.connect(URL_BASE_DATOS)
+    cursor = conexion.cursor()
+    
+    # Extraemos las calificaciones sumadas y ordenadas
+    cursor.execute('''
+        SELECT 
+            p.categoria_asignada,
+            p.estilo,
+            p.id,
+            p.nombre_1,
+            p.nombre_2,
+            SUM(c.vestuario + c.ritmo + c.precision + c.coreografia + c.dificultad + c.proyeccion) as total_puntos
+        FROM parejas p
+        JOIN calificaciones c ON p.id = c.folio_pareja
+        GROUP BY p.categoria_asignada, p.estilo, p.id, p.nombre_1, p.nombre_2
+        ORDER BY p.categoria_asignada ASC, p.estilo ASC, total_puntos DESC;
+    ''')
+    filas = cursor.fetchall()
+    cursor.close()
+    conexion.close()
+
+    # Generamos el archivo CSV en la memoria del servidor
+    output = io.StringIO()
+    # Escribimos el BOM de UTF-8 para que Excel en español reconozca los acentos automáticamente
+    output.write('\ufeff')
+    writer = csv.writer(output)
+    
+    # Creamos la fila de los encabezados
+    writer.writerow(['Categoría', 'Estilo', 'Folio', 'Bailarín 1', 'Bailarín 2', 'Puntaje Total'])
+    
+    # Vaciamos los datos de la base de datos al archivo
+    for fila in filas:
+        writer.writerow([fila[0], fila[1], fila[2], fila[3], fila[4], fila[5]])
+        
+    # Empaquetamos todo y forzamos la descarga del archivo en el navegador
+    return Response(
+        output.getvalue(), 
+        mimetype="text/csv", 
+        headers={"Content-Disposition": "attachment;filename=Resultados_Eliminatoria_Huapango.csv"}
+    )
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
